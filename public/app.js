@@ -51,7 +51,7 @@ detailForm.addEventListener('submit', async (e) => {
 
     const data = await res.json();
     if (data.success) {
-      successMsg.textContent = \`Shrink recorded to "\${listName}" successfully!\`;
+      successMsg.textContent = `Shrink recorded to "\${listName}" successfully!`;
       successMsg.classList.remove('hidden');
       detailForm.reset();
       detailForm.classList.add('hidden');
