@@ -20,21 +20,32 @@ async function populateLists() {
 
 async function loadData() {
   const list = listSelect.value;
-  const res = await fetch('/api/shrink/' + encodeURIComponent(list));
-  const data = await res.json();
-  tbody.innerHTML = '';
-  data.slice().reverse().forEach(r => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${new Date(r.timestamp).toLocaleString()}</td>
-      <td>${r.itemCode}</td>
-      <td>${r.brand || ''}</td>
-      <td>${r.description || ''}</td>
-      <td>${r.quantity}</td>
-      <td>${r.price ?? ''}</td>
-    `;
-    tbody.appendChild(tr);
-  });
+  try {
+    const res = await fetch('/api/shrink/' + encodeURIComponent(list));
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    tbody.innerHTML = '';
+    data.slice().reverse().forEach(r => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${new Date(r.timestamp).toLocaleString()}</td>
+        <td>${r.itemCode}</td>
+        <td>${r.brand || ''}</td>
+        <td>${r.description || ''}</td>
+        <td>${r.quantity}</td>
+        <td>${r.price ?? ''}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+    if (data.length === 0) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = '<td colspan="6" style="text-align:center;">No records</td>';
+      tbody.appendChild(tr);
+    }
+  } catch (err) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:red;">Error loading data</td></tr>';
+    console.error(err);
+  }
 }
 
 refreshBtn.addEventListener('click', loadData);
