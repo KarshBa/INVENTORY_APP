@@ -1,8 +1,21 @@
 
+const listSelect = document.getElementById('listSelect');
 const codeForm = document.getElementById('code-form');
 const detailForm = document.getElementById('detail-form');
 const successMsg = document.getElementById('success-msg');
 let currentItemCode = '';
+
+// Populate list selector
+fetch('/api/departments')
+  .then(r => r.json())
+  .then(depts => {
+    depts.forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d;
+      opt.textContent = d;
+      listSelect.appendChild(opt);
+    });
+  });
 
 codeForm.addEventListener('submit', (e) => {
   e.preventDefault();
@@ -19,23 +32,18 @@ detailForm.addEventListener('submit', async (e) => {
   const description = document.getElementById('description').value.trim();
   const quantity = parseFloat(document.getElementById('quantity').value);
   const price = parseFloat(document.getElementById('price').value);
+  const listName = listSelect.value;
 
-  const payload = {
-    itemCode: currentItemCode,
-    brand,
-    description,
-    quantity,
-    price
-  };
+  const payload = { itemCode: currentItemCode, brand, description, quantity, price };
   try {
-    const res = await fetch('/api/shrink', {
+    const res = await fetch('/api/shrink/' + encodeURIComponent(listName), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
     const data = await res.json();
     if (data.success) {
-      successMsg.textContent = 'Shrink recorded successfully!';
+      successMsg.textContent = `Shrink recorded to "${listName}" successfully!`;
       successMsg.classList.remove('hidden');
       detailForm.reset();
       detailForm.classList.add('hidden');

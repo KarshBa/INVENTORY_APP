@@ -11,18 +11,27 @@
     th, td { padding: 0.5rem; border-bottom: 1px solid #ddd; }
     th { background: #0077cc; color: #fff; position: sticky; top: 0; }
     tbody tr:nth-child(even) { background: #f9f9f9; }
-    .actions { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
-    .actions button { flex: 1; }
+    .actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
+    .actions button { flex: 1 1 48%; }
+    .danger { background:#cc0000; }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>Shrink Admin</h1>
+
+    <div class="card">
+      <label for="listSelect">Select List</label>
+      <select id="listSelect"></select>
+    </div>
+
     <div class="actions">
       <button id="refresh">Refresh</button>
       <button id="download">Download CSV</button>
-      <button id="clear" style="background:#cc0000;">Delete All</button>
+      <button id="clear" class="danger">Delete Selected</button>
+      <button id="downloadAll">Export ALL Lists</button>
     </div>
+
     <div style="overflow-x:auto;">
       <table id="shrink-table">
         <thead>
