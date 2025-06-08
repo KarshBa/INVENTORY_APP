@@ -79,7 +79,8 @@ app.post('/api/shrink/:listName', validateList, (req,res) => {
     };
     const store = readData();
     if (!store[req.listName]) store[req.listName] = [];
-    store[req.listName].push(record);
+    console.log('Adding record to', req.listName, record);
+        store[req.listName].push(record);
     writeData(store);
     res.json({ success:true, record });
 });
