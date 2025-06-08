@@ -52,6 +52,14 @@ const writeData = data => fs.writeFileSync(DATA_PATH, JSON.stringify(data, null,
 
 // ------------ Middleware -------------
 app.use(express.json());
+// Prevent aggressive caching of dynamic assets
+app.use((req, res, next) => {
+  if (req.path.match(/\.(js|css|json)$/)) {
+    res.set('Cache-Control', 'no-store');
+  }
+  next();
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 const validateList = (req, res, next) => {
