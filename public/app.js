@@ -31,7 +31,8 @@ detailForm.addEventListener('submit', async (e) => {
   const brand = document.getElementById('brand').value.trim();
   const description = document.getElementById('description').value.trim();
   const quantity = parseFloat(document.getElementById('quantity').value);
-  const price = parseFloat(document.getElementById('price').value);
+  const priceVal = document.getElementById('price').value;
+  const price = priceVal === '' ? null : parseFloat(priceVal);
   const listName = listSelect.value;
 
   const payload = { itemCode: currentItemCode, brand, description, quantity, price };
@@ -41,9 +42,16 @@ detailForm.addEventListener('submit', async (e) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
+
+    if (!res.ok) {
+      const msg = await res.text();
+      alert('Server error: ' + msg);
+      return;
+    }
+
     const data = await res.json();
     if (data.success) {
-      successMsg.textContent = `Shrink recorded to "${listName}" successfully!`;
+      successMsg.textContent = \`Shrink recorded to "\${listName}" successfully!\`;
       successMsg.classList.remove('hidden');
       detailForm.reset();
       detailForm.classList.add('hidden');
@@ -51,9 +59,10 @@ detailForm.addEventListener('submit', async (e) => {
       codeForm.classList.remove('hidden');
       document.getElementById('itemCode').focus();
     } else {
-      alert(data.error || 'Something went wrong.');
+      alert(data.error || 'Unknown error.');
     }
   } catch (err) {
-    alert('Network error.');
+    alert('Network error. See console.');
+    console.error(err);
   }
 });
