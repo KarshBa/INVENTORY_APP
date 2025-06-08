@@ -16,14 +16,17 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Ensure shrink_records.json exists
-if (!fs.existsSync(DATA_PATH)){
+if (!fs.existsSync(DATA_PATH)) {
     fs.writeFileSync(DATA_PATH, JSON.stringify([]));
 }
 
-// POST /api/shrink  -> { itemCode, brand, description, quantity, price }
+// Utility: read records
+const readRecords = () => JSON.parse(fs.readFileSync(DATA_PATH, 'utf-8'));
+
+// POST /api/shrink -> add shrink record
 app.post('/api/shrink', (req, res) => {
     const { itemCode, brand, description, quantity, price } = req.body;
-    if(!itemCode || !quantity){
+    if (!itemCode || !quantity) {
         return res.status(400).json({ error: 'itemCode and quantity are required' });
     }
     const record = {
@@ -35,16 +38,35 @@ app.post('/api/shrink', (req, res) => {
         quantity,
         price
     };
-    const data = JSON.parse(fs.readFileSync(DATA_PATH, 'utf-8'));
+    const data = readRecords();
     data.push(record);
     fs.writeFileSync(DATA_PATH, JSON.stringify(data, null, 2));
     res.json({ success: true, record });
 });
 
-// GET /api/shrink -> list all shrink records
+// GET /api/shrink -> list all records
 app.get('/api/shrink', (req, res) => {
-    const data = JSON.parse(fs.readFileSync(DATA_PATH, 'utf-8'));
-    res.json(data);
+    res.json(readRecords());
+});
+
+// GET /api/shrink/export -> download CSV
+app.get('/api/shrink/export', (req, res) => {
+    const records = readRecords();
+    const headers = ['id', 'timestamp', 'itemCode', 'brand', 'description', 'quantity', 'price'];
+    const escape = (v='') => (`"${String(v).replace(/"/g, '""')}"`);
+    const csv = [
+        headers.join(','),
+        ...records.map(r => headers.map(h => escape(r[h])).join(','))
+    ].join('\n');
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="shrink_records.csv"');
+    res.send(csv);
+});
+
+// DELETE /api/shrink -> clear all records
+app.delete('/api/shrink', (req, res) => {
+    fs.writeFileSync(DATA_PATH, '[]');
+    res.json({ success: true });
 });
 
 app.listen(PORT, () => {
