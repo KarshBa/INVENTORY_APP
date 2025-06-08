@@ -30,7 +30,7 @@ detailForm.addEventListener('submit',async e=>{
     brand:document.getElementById('brand').value.trim(),
     description:document.getElementById('description').value.trim(),
     quantity:parseFloat(document.getElementById('quantity').value),
-    price:parseFloat(document.getElementById('price').value)||null
+    price:document.getElementById('price').value===''?null:parseFloat(document.getElementById('price').value)
   };
   const listName=listSelect.value;
   const res=await fetch('/api/shrink/'+encodeURIComponent(listName),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
