@@ -13,67 +13,60 @@ const CSV_PATH = path.join(__dirname, 'DEPARTMENTS.csv');
 const JSON_PATH = path.join(__dirname, 'public', 'departments.json');
 const DATA_PATH = path.join(__dirname, 'shrink_records.json');
 
-// ---------- Resolve departments list ----------
+// ---- Resolve departments ----
 let DEPARTMENTS = [];
-
-// 1. CSV file takes precedence (easy editing in repo)
 if (fs.existsSync(CSV_PATH)) {
-    const raw = fs.readFileSync(CSV_PATH, 'utf-8').split(/\r?\n/).filter(Boolean);
-    DEPARTMENTS = raw.map(line => {
-        const parts = line.split(',');
+    const lines = fs.readFileSync(CSV_PATH, 'utf-8')
+                    .split(/\r?\n/)
+                    .map(l => l.trim())
+                    .filter(Boolean);
+    DEPARTMENTS = lines.map(l => {
+        const parts = l.split(',');
         return (parts.length > 1 ? parts[1] : parts[0]).trim();
     });
-}
-
-// 2. Otherwise fallback to departments.json
-if (DEPARTMENTS.length === 0 && fs.existsSync(JSON_PATH)) {
+} else if (fs.existsSync(JSON_PATH)) {
     DEPARTMENTS = JSON.parse(fs.readFileSync(JSON_PATH, 'utf-8'));
+} else if (fs.existsSync(DATA_PATH)) {
+    try { DEPARTMENTS = Object.keys(JSON.parse(fs.readFileSync(DATA_PATH, 'utf-8'))); }
+    catch { }
 }
-
-// 3. Otherwise read keys already in shrink_records.json
-if (DEPARTMENTS.length === 0 && fs.existsSync(DATA_PATH)) {
-    try {
-        const keys = Object.keys(JSON.parse(fs.readFileSync(DATA_PATH, 'utf-8')));
-        if (keys.length) DEPARTMENTS = keys;
-    } catch { /* ignore */ }
-}
-
-// 4. Final fallback
 if (DEPARTMENTS.length === 0) DEPARTMENTS = ['General'];
 
-// Sync to departments.json for client fetch
+// keep departments.json for client
 fs.mkdirSync(path.dirname(JSON_PATH), { recursive: true });
 fs.writeFileSync(JSON_PATH, JSON.stringify(DEPARTMENTS, null, 2));
 
-// ---------- Ensure shrink_records.json ----------
+// ---- Init data ----
 let dataObj = {};
 if (fs.existsSync(DATA_PATH)) {
     try { dataObj = JSON.parse(fs.readFileSync(DATA_PATH, 'utf-8')); }
-    catch { dataObj = {}; }
+    catch { }
 }
-let changed = false;
+let touched = false;
 DEPARTMENTS.forEach(d => {
-    if (!dataObj[d]) { dataObj[d] = []; changed = true; }
+    if (!dataObj[d]) { dataObj[d] = []; touched = true; }
 });
-if (changed || !fs.existsSync(DATA_PATH)) {
+if (touched || !fs.existsSync(DATA_PATH)) {
     fs.writeFileSync(DATA_PATH, JSON.stringify(dataObj, null, 2));
 }
 
 const readData = () => JSON.parse(fs.readFileSync(DATA_PATH, 'utf-8'));
 const writeData = obj => fs.writeFileSync(DATA_PATH, JSON.stringify(obj, null, 2));
 
-// ---------- Middleware ----------
+// ---- Middleware ----
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Case‑insensitive list validation
 const validateList = (req, res, next) => {
-    const name = decodeURIComponent(req.params.listName);
-    if (!DEPARTMENTS.includes(name)) return res.status(400).json({ error: 'Invalid list' });
-    req.listName = name;
+    const raw = decodeURIComponent(req.params.listName);
+    const canonical = DEPARTMENTS.find(d => d.toUpperCase() === raw.toUpperCase());
+    if (!canonical) return res.status(400).json({ error: 'Invalid list' });
+    req.listName = canonical;
     next();
 };
 
-// ---------- Routes ----------
+// ---- Routes ----
 app.get('/api/departments', (req,res) => res.json(DEPARTMENTS));
 
 app.post('/api/shrink/:listName', validateList, (req,res) => {
@@ -127,5 +120,4 @@ app.get('/api/shrink/export-all', (req,res) => {
     res.send([headers.join(','), ...rows].join('\n'));
 });
 
-// ---------- Start ----------
-app.listen(PORT, () => console.log('Shrink app listening on ' + PORT));
+app.listen(PORT, () => console.log('Shrink app listening on port ' + PORT));
