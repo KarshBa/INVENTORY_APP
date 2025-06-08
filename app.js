@@ -1,0 +1,51 @@
+
+const codeForm = document.getElementById('code-form');
+const detailForm = document.getElementById('detail-form');
+const successMsg = document.getElementById('success-msg');
+let currentItemCode = '';
+
+codeForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  currentItemCode = document.getElementById('itemCode').value.trim();
+  if (currentItemCode === '') return;
+  codeForm.classList.add('hidden');
+  detailForm.classList.remove('hidden');
+  document.getElementById('brand').focus();
+});
+
+detailForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const brand = document.getElementById('brand').value.trim();
+  const description = document.getElementById('description').value.trim();
+  const quantity = parseFloat(document.getElementById('quantity').value);
+  const price = parseFloat(document.getElementById('price').value);
+
+  const payload = {
+    itemCode: currentItemCode,
+    brand,
+    description,
+    quantity,
+    price
+  };
+  try {
+    const res = await fetch('/api/shrink', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (data.success) {
+      successMsg.textContent = 'Shrink recorded successfully!';
+      successMsg.classList.remove('hidden');
+      detailForm.reset();
+      detailForm.classList.add('hidden');
+      codeForm.reset();
+      codeForm.classList.remove('hidden');
+      document.getElementById('itemCode').focus();
+    } else {
+      alert(data.error || 'Something went wrong.');
+    }
+  } catch (err) {
+    alert('Network error.');
+  }
+});

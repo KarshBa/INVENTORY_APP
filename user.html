@@ -1,0 +1,44 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Inventory Shrink Tracker</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>Inventory Shrink Tracker</h1>
+    <form id="code-form" class="card">
+      <label for="itemCode">Enter Item Code</label>
+      <input type="text" id="itemCode" required />
+      <button type="submit">Next</button>
+    </form>
+
+    <form id="detail-form" class="card hidden">
+      <div class="field">
+        <label for="brand">Brand</label>
+        <input type="text" id="brand" />
+      </div>
+      <div class="field">
+        <label for="description">Description</label>
+        <input type="text" id="description" />
+      </div>
+      <div class="field">
+        <label for="quantity">Quantity Shrunk</label>
+        <input type="number" step="0.01" id="quantity" required />
+      </div>
+      <div class="field">
+        <label for="price">Price ($)</label>
+        <input type="number" step="0.01" id="price" />
+      </div>
+      <button type="submit">Record Shrink</button>
+    </form>
+
+    <section id="success-msg" class="hidden"></section>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
