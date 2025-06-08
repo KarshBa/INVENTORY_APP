@@ -98,7 +98,8 @@ app.post('/api/shrink/:listName', validateList, (req, res) => {
 // Get list
 app.get('/api/shrink/:listName', validateList, (req, res) => {
     const data = readData();
-    res.json(data[req.listKey] || []);
+    console.log('GET records for', req.listKey, (data[req.listKey]||[]).length);
+        res.json(data[req.listKey] || []);
 });
 
 // Delete list
