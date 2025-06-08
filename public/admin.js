@@ -6,6 +6,8 @@ const clearBtn = document.getElementById('clear');
 const downloadAllBtn = document.getElementById('downloadAll');
 const listSelect = document.getElementById('listSelect');
 
+const slug = s => s.trim().toUpperCase();
+
 async function populateLists() {
   const res = await fetch('/api/departments');
   const lists = await res.json();
@@ -19,9 +21,9 @@ async function populateLists() {
 }
 
 async function loadData() {
-  const list = listSelect.value;
+  const raw = listSelect.value;
   try {
-    const res = await fetch('/api/shrink/' + encodeURIComponent(list));
+    const res = await fetch('/api/shrink/' + encodeURIComponent(raw));
     if (!res.ok) throw new Error(await res.text());
     const data = await res.json();
     tbody.innerHTML = '';
@@ -38,9 +40,7 @@ async function loadData() {
       tbody.appendChild(tr);
     });
     if (data.length === 0) {
-      const tr = document.createElement('tr');
-      tr.innerHTML = '<td colspan="6" style="text-align:center;">No records</td>';
-      tbody.appendChild(tr);
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No records</td></tr>';
     }
   } catch (err) {
     tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:red;">Error loading data</td></tr>';
@@ -51,13 +51,13 @@ async function loadData() {
 refreshBtn.addEventListener('click', loadData);
 listSelect.addEventListener('change', loadData);
 downloadBtn.addEventListener('click', () => {
-  const list = listSelect.value;
-  window.location = '/api/shrink/' + encodeURIComponent(list) + '/export';
+  const raw = listSelect.value;
+  window.location = '/api/shrink/' + encodeURIComponent(raw) + '/export';
 });
 clearBtn.addEventListener('click', async () => {
-  const list = listSelect.value;
-  if (!confirm(`Delete all records in "${list}"?`)) return;
-  await fetch('/api/shrink/' + encodeURIComponent(list), { method: 'DELETE' });
+  const raw = listSelect.value;
+  if (!confirm(`Delete all records in "${raw}"?`)) return;
+  await fetch('/api/shrink/' + encodeURIComponent(raw), { method: 'DELETE' });
   loadData();
 });
 downloadAllBtn.addEventListener('click', () => {
