@@ -26,6 +26,7 @@ async function loadData() {
     const res = await fetch('/api/shrink/' + encodeURIComponent(raw));
     if (!res.ok) throw new Error(await res.text());
     const data = await res.json();
+      console.log('Records for', raw, data);
     tbody.innerHTML = '';
     data.slice().reverse().forEach(r => {
       const tr = document.createElement('tr');
