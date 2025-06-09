@@ -58,4 +58,44 @@ app.get('/api/shrink/:list',(req,res)=>{
   res.json(store[listKey]||[]);
 });
 
+// ─── CSV exporter for ONE list ─────────────────────────────
+app.get('/api/shrink/:list/export', (req, res) => {
+  const listKey = slug(req.params.list);
+  const data    = readJSON(DATA_PATH);
+  const records = data[listKey] || [];
+
+  const headers = ['id','timestamp','itemCode','brand','description','quantity','price'];
+  const esc     = v => `"${String(v ?? '').replace(/"/g,'""')}"`;
+  const csv     = [
+    headers.join(','),
+    ...records.map(r => headers.map(h => esc(r[h])).join(','))
+  ].join('\\n');
+
+  res.setHeader('Content-Type',        'text/csv');
+  res.setHeader(
+    'Content-Disposition',
+    `attachment; filename="shrink_${listKey.replace(/\\s+/g,'_')}.csv"`
+  );
+  res.send(csv);
+});
+
+// ─── CSV exporter for ALL lists ────────────────────────────
+app.get('/api/shrink/export-all', (_req, res) => {
+  const data    = readJSON(DATA_PATH);
+  const headers = ['list','id','timestamp','itemCode','brand','description','quantity','price'];
+  const esc     = v => `"${String(v ?? '').replace(/"/g,'""')}"`;
+
+  const rows = [];
+  Object.keys(data).forEach(k =>
+    data[k].forEach(r =>
+      rows.push([k, r.id, r.timestamp, r.itemCode, r.brand, r.description, r.quantity, r.price]
+                 .map(esc).join(','))
+    )
+  );
+
+  res.setHeader('Content-Type',        'text/csv');
+  res.setHeader('Content-Disposition', 'attachment; filename="shrink_all_lists.csv"');
+  res.send([headers.join(','), ...rows].join('\\n'));
+});
+
 app.listen(PORT,()=>console.log('Listening on',PORT));
