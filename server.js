@@ -78,7 +78,7 @@ app.get('/api/shrink/export-all', (req, res) => {
 
   const totalRow = ['TOTAL','','','','','','',esc(total.toFixed(2))].join(',');
 
-  const csv = [headers.join(','), ...rows, totalRow].join('\\n');
+  const csv = [headers.join(','), ...rows, totalRow].join('\n');
   res.status(200).set({
     'Cache-Control':  'no-store',
     'Content-Type':   'text/csv; charset=utf-8',
@@ -149,7 +149,7 @@ app.get('/api/shrink/:list/export', (req, res) => {
 
   const totalRow = ['TOTAL','','','','','',esc(total.toFixed(2))].join(',');
 
-  const csv = [headers.join(','), ...rows, totalRow].join('\\n');
+  const csv = [headers.join(','), ...rows, totalRow].join('\n');
   res.status(200).set({
     'Cache-Control':  'no-store',
     'Content-Type':   'text/csv; charset=utf-8',
