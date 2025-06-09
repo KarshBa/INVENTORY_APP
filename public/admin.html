@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -9,11 +8,12 @@
   <style>
     table { width: 100%; border-collapse: collapse; }
     th, td { padding: 0.5rem; border-bottom: 1px solid #ddd; }
-    th { background: #0077cc; color: #fff; position: sticky; top: 0; }
-    tbody tr:nth-child(even) { background: #f9f9f9; }
-    .actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
-    .actions button { flex: 1 1 48%; }
+    th { background:#0077cc; color:#fff; position:sticky; top:0; }
+    .actions { display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom:1rem; }
+    .actions button { flex:1 1 48%; }
     .danger { background:#cc0000; }
+    .daterow { display:flex; gap:0.5rem; }
+    .daterow input { flex:1 1 50%; }
   </style>
 </head>
 <body>
@@ -23,12 +23,16 @@
     <div class="card">
       <label for="listSelect">Select List</label>
       <select id="listSelect"></select>
+      <div class="daterow">
+        <input type="date" id="startDate">
+        <input type="date" id="endDate">
+      </div>
     </div>
 
     <div class="actions">
       <button id="refresh">Refresh</button>
       <button id="download">Download CSV</button>
-      <button id="clear" class="danger">Delete Selected</button>
+      <button id="clear"  class="danger">Delete Selected</button>
       <button id="downloadAll">Export ALL Lists</button>
     </div>
 
@@ -36,12 +40,8 @@
       <table id="shrink-table">
         <thead>
           <tr>
-            <th>Time</th>
-            <th>Item Code</th>
-            <th>Brand</th>
-            <th>Description</th>
-            <th>Qty</th>
-            <th>Price</th>
+            <th>Time</th><th>Item Code</th><th>Brand</th>
+            <th>Description</th><th>Qty</th><th>Price</th>
           </tr>
         </thead>
         <tbody></tbody>
