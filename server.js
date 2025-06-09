@@ -1,5 +1,5 @@
-// server.js – persistent‑disk ready, full CSV exporters
-// -----------------------------------------------
+// server.js – fixed route order, persistent disk, CSV exporters
+// ----------------------------------------------------------------
 import express from 'express';
 import fs from 'fs';
 import path from 'path';
@@ -9,40 +9,35 @@ import crypto from 'crypto';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
 
-const app = express();
-app.disable('etag');
+const app  = express();
+app.disable('etag');                           // ensure no 304
 const PORT = process.env.PORT || 3000;
 
-// ─── Persistent data directory (Render disk) ────────────────────
-const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
+// ── Persistent data directory (Render disk) ──────────────────────
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname,'data');
 console.log('[Shrink-App] DATA_DIR →', DATA_DIR);
-fs.mkdirSync(DATA_DIR, { recursive: true });
+fs.mkdirSync(DATA_DIR, { recursive:true });
 const DATA_PATH = path.join(DATA_DIR, 'shrink_records.json');
 
-// ─── Helper functions ───────────────────────────────────────────
-const slug      = s => s.trim().toUpperCase();
-const readJSON  = p => (fs.existsSync(p) ? JSON.parse(fs.readFileSync(p,'utf-8')) : {});
-const writeJSON = (p,obj) => fs.writeFileSync(p, JSON.stringify(obj,null,2));
+// ── Department bootstrap (for dropdown) ──────────────────────────
+const DEPT_PATH   = path.join(__dirname,'public','departments.json');
+let   DEPARTMENTS = fs.existsSync(DEPT_PATH)
+    ? JSON.parse(fs.readFileSync(DEPT_PATH,'utf-8'))
+    : ['GENERAL'];
+fs.mkdirSync(path.dirname(DEPT_PATH), { recursive:true });
+fs.writeFileSync(DEPT_PATH, JSON.stringify(DEPARTMENTS,null,2));
 
-// ─── Department list  (front‑end dropdown) ──────────────────────
-const DEPT_PATH   = path.join(__dirname, 'public', 'departments.json');
-let DEPARTMENTS   = [];
-
-if (fs.existsSync(DEPT_PATH)) {
-  DEPARTMENTS = JSON.parse(fs.readFileSync(DEPT_PATH,'utf-8'));
-}
-if (!DEPARTMENTS.length) DEPARTMENTS = ['GENERAL'];
-fs.mkdirSync(path.dirname(DEPT_PATH), { recursive: true });
-writeJSON(DEPT_PATH, DEPARTMENTS);
-
-// ─── Initialise shrink_records.json *once* ──────────────────────
+// ── Init store file if absent ─────────────────────────────────────
 if (!fs.existsSync(DATA_PATH)) {
-  const bootstrap = {};
-  DEPARTMENTS.forEach(d => (bootstrap[slug(d)] = []));
-  writeJSON(DATA_PATH, bootstrap);
+  const init = {};
+  DEPARTMENTS.forEach(d => (init[d.toUpperCase()] = []));
+  fs.writeFileSync(DATA_PATH, JSON.stringify(init,null,2));
 }
+const readJSON  = p => JSON.parse(fs.readFileSync(p,'utf-8'));
+const writeJSON = (p,obj) => fs.writeFileSync(p, JSON.stringify(obj,null,2));
+const slug      = s => s.trim().toUpperCase();
 
-// ─── Express middleware ─────────────────────────────────────────
+// ── Middleware & static ──────────────────────────────────────────
 app.use(express.json());
 app.use((req,res,next) => {
   if (req.path.match(/\.(js|css|json)$/)) res.set('Cache-Control','no-store');
@@ -50,15 +45,37 @@ app.use((req,res,next) => {
 });
 app.use(express.static(path.join(__dirname,'public')));
 
-// ─── API routes ─────────────────────────────────────────────────
+// ── API routes (specific first, generic after) ───────────────────
+
+// Export ALL lists as CSV  (must appear BEFORE generic :list route)
+app.get('/api/shrink/export-all', (_req,res) => {
+  const store   = readJSON(DATA_PATH);
+  const headers = ['list','id','timestamp','itemCode','brand','description','quantity','price'];
+  const esc     = v => \`\${String(v ?? '').replace(/"/g,'""')}\`;
+
+  const rows = [];
+  for (const [list, arr] of Object.entries(store)) {
+    for (const r of arr) {
+      rows.push([list, r.id, r.timestamp, r.itemCode, r.brand,
+                 r.description, r.quantity, r.price].map(esc).join(','));
+    }
+  }
+
+  const csv = [headers.join(','), ...rows].join('\n');
+  res.status(200).set({
+    'Cache-Control':       'no-store',
+    'Content-Type':        'text/csv; charset=utf-8',
+    'Content-Disposition': 'attachment; filename="shrink_all_lists.csv"'
+  }).send(csv);
+});
 
 // List names
 app.get('/api/departments', (_req,res) => res.json(DEPARTMENTS));
 
 // Add shrink record
 app.post('/api/shrink/:list', (req,res) => {
-  const key     = slug(req.params.list);
-  const store   = readJSON(DATA_PATH);
+  const key   = slug(req.params.list);
+  const store = readJSON(DATA_PATH);
   if (!store[key]) store[key] = [];
 
   const { itemCode, brand, description, quantity, price } = req.body;
@@ -81,7 +98,7 @@ app.get('/api/shrink/:list', (req,res) => {
   res.json(store[slug(req.params.list)] || []);
 });
 
-// Delete all records in one list
+// Delete one list
 app.delete('/api/shrink/:list', (req,res) => {
   const key   = slug(req.params.list);
   const store = readJSON(DATA_PATH);
@@ -92,45 +109,20 @@ app.delete('/api/shrink/:list', (req,res) => {
 
 // Export CSV for one list
 app.get('/api/shrink/:list/export', (req,res) => {
-  const key     = slug(req.params.list);
-  const store   = readJSON(DATA_PATH);
-  const rows    = store[key] || [];
-
+  const key   = slug(req.params.list);
+  const store = readJSON(DATA_PATH);
   const headers = ['id','timestamp','itemCode','brand','description','quantity','price'];
-  const esc     = v => `"${String(v ?? '').replace(/"/g,'""')}"`;
-  const csv     = [
-    headers.join(','),
-    ...rows.map(r => headers.map(h => esc(r[h])).join(','))
-  ].join('\n');
+  const esc = v => \`\${String(v ?? '').replace(/"/g,'""')}\`;
 
-  res.setHeader('Content-Type','text/csv; charset=utf-8');
-  res.setHeader('Content-Disposition',`attachment; filename="shrink_${key.replace(/\s+/g,'_')}.csv"`);
-  res.send(csv);
+  const rows = (store[key] || []).map(r => headers.map(h => esc(r[h])).join(','));
+  const csv  = [headers.join(','), ...rows].join('\n');
+
+  res.status(200).set({
+    'Cache-Control':       'no-store',
+    'Content-Type':        'text/csv; charset=utf-8',
+    'Content-Disposition': \`attachment; filename="shrink_\${key}.csv"\`
+  }).send(csv);
 });
 
-// Export CSV for ALL lists  – force download every time
-app.get('/api/shrink/export-all', (_req, res) => {
-  const store   = readJSON(DATA_PATH);
-  const headers = ['list','id','timestamp','itemCode','brand',
-                   'description','quantity','price'];
-  const esc     = v => `"${String(v ?? '').replace(/"/g,'""')}"`;
-
-  const rows = [];
-  Object.entries(store).forEach(([k, arr]) =>
-    arr.forEach(r =>
-      rows.push([k, r.id, r.timestamp, r.itemCode, r.brand,
-                 r.description, r.quantity, r.price].map(esc).join(','))
-    )
-  );
-
-  const csv = [headers.join(','), ...rows].join('\n');
-  res.status(200);                                 // ← be explicit
-  res.setHeader('Cache-Control', 'no-store');      // ← stop 304
-  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-  res.setHeader('Content-Disposition',
-                'attachment; filename="shrink_all_lists.csv"');
-  res.send(csv);
-});
-
-// ─── Start server ───────────────────────────────────────────────
+// ── Start server ─────────────────────────────────────────────────
 app.listen(PORT, () => console.log('Inventory Shrink app running on port', PORT));
