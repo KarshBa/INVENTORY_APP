@@ -107,23 +107,27 @@ app.get('/api/shrink/:list/export', (req,res) => {
   res.send(csv);
 });
 
-// Export CSV for all lists
-app.get('/api/shrink/export-all', (_req,res) => {
+// Export CSV for ALL lists  – force download every time
+app.get('/api/shrink/export-all', (_req, res) => {
   const store   = readJSON(DATA_PATH);
-  const headers = ['list','id','timestamp','itemCode','brand','description','quantity','price'];
+  const headers = ['list','id','timestamp','itemCode','brand',
+                   'description','quantity','price'];
   const esc     = v => `"${String(v ?? '').replace(/"/g,'""')}"`;
 
-  const csvRows = [];
-  Object.entries(store).forEach(([k,arr]) => {
-    arr.forEach(r => {
-      csvRows.push([k, r.id, r.timestamp, r.itemCode, r.brand,
-                   r.description, r.quantity, r.price].map(esc).join(','));
-    });
-  });
+  const rows = [];
+  Object.entries(store).forEach(([k, arr]) =>
+    arr.forEach(r =>
+      rows.push([k, r.id, r.timestamp, r.itemCode, r.brand,
+                 r.description, r.quantity, r.price].map(esc).join(','))
+    )
+  );
 
-  const csv = [headers.join(','), ...csvRows].join('\n');
-  res.setHeader('Content-Type','text/csv; charset=utf-8');
-  res.setHeader('Content-Disposition','attachment; filename="shrink_all_lists.csv"');
+  const csv = [headers.join(','), ...rows].join('\n');
+  res.status(200);                                 // ← be explicit
+  res.setHeader('Cache-Control', 'no-store');      // ← stop 304
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition',
+                'attachment; filename="shrink_all_lists.csv"');
   res.send(csv);
 });
 
