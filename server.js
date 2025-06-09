@@ -14,6 +14,7 @@ const PORT = process.env.PORT || 3000;
 
 // ─── Persistent data directory (Render disk) ────────────────────
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
+console.log('[Shrink-App] DATA_DIR →', DATA_DIR);
 fs.mkdirSync(DATA_DIR, { recursive: true });
 const DATA_PATH = path.join(DATA_DIR, 'shrink_records.json');
 
