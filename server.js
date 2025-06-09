@@ -39,6 +39,20 @@ let DEPARTMENTS = readJSON(DEPT_PATH);
 if (!DEPARTMENTS.length) DEPARTMENTS = ['GENERAL'];
 writeJSON(DEPT_PATH, DEPARTMENTS);
 
+// ─── DEPARTMENTS list ──────────────────────────────────────────────
+let DEPARTMENTS = [];
+if (fs.existsSync(DEPT_PATH)) {
+  DEPARTMENTS = JSON.parse(fs.readFileSync(DEPT_PATH, 'utf-8'));
+}
+if (!DEPARTMENTS.length) DEPARTMENTS = ['GENERAL'];
+
+// ─── ensure shrink_records.json exists *after* DEPARTMENTS is ready ─
+if (!fs.existsSync(DATA_PATH)) {
+  const bootstrap = {};
+  DEPARTMENTS.forEach(d => (bootstrap[slug(d)] = []));
+  writeJSON(DATA_PATH, bootstrap);
+}
+
 // Init shrink_records
 let store = readJSON(DATA_PATH);
 DEPARTMENTS.forEach(d => { const key=d.trim().toUpperCase(); if(!store[key]) store[key]=[]; });
