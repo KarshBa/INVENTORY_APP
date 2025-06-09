@@ -17,7 +17,7 @@ const DATA_PATH = path.join(DATA_DIR, 'shrink_records.json');
 const DEPT_PATH = path.join(__dirname, 'public', 'departments.json');
 
 // Helper
-const readJSON = p => JSON.parse(fs.existsSync(p) ? fs.readFileSync(p,'utf-8') : '[]');
+const readJSON = p => fs.existsSync(p) ? JSON.parse(fs.readFileSync(p,'utf-8')) : {};
 const writeJSON = (p,obj) => fs.writeFileSync(p, JSON.stringify(obj,null,2));
 
 app.use(express.json());
