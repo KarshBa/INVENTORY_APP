@@ -70,7 +70,9 @@ app.get('/api/shrink/export-all', (req, res) => {
   for (const [list, arr] of Object.entries(store)) {
     arr.filter(r => inRange(r.timestamp, from, to))
        .forEach(r => {
-         total += parseFloat(r.price) || 0;
+const qty   = parseFloat(r.quantity) || 0;
+const price = parseFloat(r.price)     || 0;
+total += qty * price;
          rows.push([list, r.id, r.timestamp, r.itemCode, r.brand,
                     r.description, r.quantity, r.price].map(esc).join(','));
        });
@@ -143,7 +145,9 @@ app.get('/api/shrink/:list/export', (req, res) => {
   const rows = (store[listKey] || [])
     .filter(r => inRange(r.timestamp, from, to))
     .map(r => {
-      total += parseFloat(r.price) || 0;
+const qty   = parseFloat(r.quantity) || 0;
+const price = parseFloat(r.price)     || 0;
+total += qty * price;
       return headers.map(h => esc(r[h])).join(',');
     });
 
