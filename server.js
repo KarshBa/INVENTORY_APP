@@ -55,23 +55,33 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // ---- Routes ----
 
-// CSV all lists (specific first)
+// ─── CSV for ALL lists *with total* ───────────────────────────────
 app.get('/api/shrink/export-all', (req, res) => {
   const { from, to } = req.query;
   const store   = readJSON(DATA_PATH);
-  const headers = ['list','id','timestamp','itemCode','brand','description','quantity','price'];
-  const rows = [];
+
+  const headers = ['list','id','timestamp','itemCode','brand',
+                   'description','quantity','price'];
+  const esc     = v => `"${String(v ?? '').replace(/"/g,'""')}"`;
+
+  const rows   = [];
+  let   total  = 0;
+
   for (const [list, arr] of Object.entries(store)) {
     arr.filter(r => inRange(r.timestamp, from, to))
-       .forEach(r => rows.push(
-         [list, r.id, r.timestamp, r.itemCode, r.brand, r.description, r.quantity, r.price]
-         .map(esc).join(',')
-       ));
+       .forEach(r => {
+         total += parseFloat(r.price) || 0;
+         rows.push([list, r.id, r.timestamp, r.itemCode, r.brand,
+                    r.description, r.quantity, r.price].map(esc).join(','));
+       });
   }
-  const csv = [headers.join(','), ...rows].join('\n');
+
+  const totalRow = ['TOTAL','','','','','','',esc(total.toFixed(2))].join(',');
+
+  const csv = [headers.join(','), ...rows, totalRow].join('\\n');
   res.status(200).set({
-    'Cache-Control': 'no-store',
-    'Content-Type': 'text/csv; charset=utf-8',
+    'Cache-Control':  'no-store',
+    'Content-Type':   'text/csv; charset=utf-8',
     'Content-Disposition': 'attachment; filename="shrink_all_lists.csv"'
   }).send(csv);
 });
@@ -120,20 +130,31 @@ app.delete('/api/shrink/:list', (req, res) => {
   res.json({ success: true });
 });
 
-// CSV for one list filtered by range
+// ─── CSV for ONE list *with total* ────────────────────────────────
 app.get('/api/shrink/:list/export', (req, res) => {
   const { from, to } = req.query;
-  const key   = slug(req.params.list);
-  const store = readJSON(DATA_PATH);
-  const headers = ['id','timestamp','itemCode','brand','description','quantity','price'];
-  const rows = (store[key] || [])
+  const listKey = slug(req.params.list);
+  const store   = readJSON(DATA_PATH);
+
+  const headers = ['id','timestamp','itemCode','brand',
+                   'description','quantity','price'];
+  let   total   = 0;
+
+  const rows = (store[listKey] || [])
     .filter(r => inRange(r.timestamp, from, to))
-    .map(r => headers.map(h => esc(r[h])).join(','));
-  const csv = [headers.join(','), ...rows].join('\n');
+    .map(r => {
+      total += parseFloat(r.price) || 0;
+      return headers.map(h => esc(r[h])).join(',');
+    });
+
+  const totalRow = ['TOTAL','','','','','',esc(total.toFixed(2))].join(',');
+
+  const csv = [headers.join(','), ...rows, totalRow].join('\\n');
   res.status(200).set({
-    'Cache-Control': 'no-store',
-    'Content-Type': 'text/csv; charset=utf-8',
-    'Content-Disposition': `attachment; filename="shrink_${key}.csv"`
+    'Cache-Control':  'no-store',
+    'Content-Type':   'text/csv; charset=utf-8',
+    'Content-Disposition':
+      `attachment; filename="shrink_${listKey}.csv"`
   }).send(csv);
 });
 
