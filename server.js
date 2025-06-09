@@ -1,5 +1,4 @@
-// server.js – fixed route order, persistent disk, CSV exporters
-// ----------------------------------------------------------------
+// server.js – fixed route order & syntax (no template literal)
 import express from 'express';
 import fs from 'fs';
 import path from 'path';
@@ -9,35 +8,37 @@ import crypto from 'crypto';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
 
-const app  = express();
-app.disable('etag');                           // ensure no 304
+const app = express();
+app.disable('etag');
 const PORT = process.env.PORT || 3000;
 
-// ── Persistent data directory (Render disk) ──────────────────────
-const DATA_DIR = process.env.DATA_DIR || path.join(__dirname,'data');
+// Persistent disk
+const DATA_DIR  = process.env.DATA_DIR || path.join(__dirname,'data');
 console.log('[Shrink-App] DATA_DIR →', DATA_DIR);
-fs.mkdirSync(DATA_DIR, { recursive:true });
-const DATA_PATH = path.join(DATA_DIR, 'shrink_records.json');
+fs.mkdirSync(DATA_DIR,{recursive:true});
+const DATA_PATH = path.join(DATA_DIR,'shrink_records.json');
 
-// ── Department bootstrap (for dropdown) ──────────────────────────
-const DEPT_PATH   = path.join(__dirname,'public','departments.json');
-let   DEPARTMENTS = fs.existsSync(DEPT_PATH)
+// Departments
+const DEPT_PATH = path.join(__dirname,'public','departments.json');
+let DEPARTMENTS = fs.existsSync(DEPT_PATH)
     ? JSON.parse(fs.readFileSync(DEPT_PATH,'utf-8'))
     : ['GENERAL'];
-fs.mkdirSync(path.dirname(DEPT_PATH), { recursive:true });
+fs.mkdirSync(path.dirname(DEPT_PATH),{recursive:true});
 fs.writeFileSync(DEPT_PATH, JSON.stringify(DEPARTMENTS,null,2));
 
-// ── Init store file if absent ─────────────────────────────────────
-if (!fs.existsSync(DATA_PATH)) {
+// Init store file
+if (!fs.existsSync(DATA_PATH)){
   const init = {};
   DEPARTMENTS.forEach(d => (init[d.toUpperCase()] = []));
   fs.writeFileSync(DATA_PATH, JSON.stringify(init,null,2));
 }
-const readJSON  = p => JSON.parse(fs.readFileSync(p,'utf-8'));
-const writeJSON = (p,obj) => fs.writeFileSync(p, JSON.stringify(obj,null,2));
-const slug      = s => s.trim().toUpperCase();
 
-// ── Middleware & static ──────────────────────────────────────────
+const readJSON  = p => JSON.parse(fs.readFileSync(p,'utf-8'));
+const writeJSON = (p,o) => fs.writeFileSync(p, JSON.stringify(o,null,2));
+const slug      = s => s.trim().toUpperCase();
+const esc       = v => '"' + String(v ?? '').replace(/"/g,'""') + '"';
+
+// Middleware
 app.use(express.json());
 app.use((req,res,next) => {
   if (req.path.match(/\.(js|css|json)$/)) res.set('Cache-Control','no-store');
@@ -45,84 +46,73 @@ app.use((req,res,next) => {
 });
 app.use(express.static(path.join(__dirname,'public')));
 
-// ── API routes (specific first, generic after) ───────────────────
+// ---- Routes ----
 
-// Export ALL lists as CSV  (must appear BEFORE generic :list route)
+// Export ALL lists CSV (declare first)
 app.get('/api/shrink/export-all', (_req,res) => {
-  const store   = readJSON(DATA_PATH);
+  const store = readJSON(DATA_PATH);
   const headers = ['list','id','timestamp','itemCode','brand','description','quantity','price'];
-  const esc     = v => \`\${String(v ?? '').replace(/"/g,'""')}\`;
-
   const rows = [];
-  for (const [list, arr] of Object.entries(store)) {
-    for (const r of arr) {
-      rows.push([list, r.id, r.timestamp, r.itemCode, r.brand,
-                 r.description, r.quantity, r.price].map(esc).join(','));
+  for (const [list,arr] of Object.entries(store)){
+    for (const r of arr){
+      rows.push([list,r.id,r.timestamp,r.itemCode,r.brand,
+                 r.description,r.quantity,r.price].map(esc).join(','));
     }
   }
-
-  const csv = [headers.join(','), ...rows].join('\n');
+  const csv = [headers.join(','),...rows].join('\n');
   res.status(200).set({
-    'Cache-Control':       'no-store',
-    'Content-Type':        'text/csv; charset=utf-8',
-    'Content-Disposition': 'attachment; filename="shrink_all_lists.csv"'
+    'Cache-Control':'no-store',
+    'Content-Type':'text/csv; charset=utf-8',
+    'Content-Disposition':'attachment; filename="shrink_all_lists.csv"'
   }).send(csv);
 });
 
-// List names
-app.get('/api/departments', (_req,res) => res.json(DEPARTMENTS));
+// Departments list
+app.get('/api/departments', (_req,res)=> res.json(DEPARTMENTS));
 
-// Add shrink record
-app.post('/api/shrink/:list', (req,res) => {
-  const key   = slug(req.params.list);
+// Add record
+app.post('/api/shrink/:list', (req,res)=>{
+  const key = slug(req.params.list);
   const store = readJSON(DATA_PATH);
-  if (!store[key]) store[key] = [];
-
+  if(!store[key]) store[key]=[];
   const { itemCode, brand, description, quantity, price } = req.body;
-  if (!itemCode || quantity === undefined) {
-    return res.status(400).json({ error:'itemCode and quantity required' });
+  if(!itemCode||quantity===undefined){
+    return res.status(400).json({error:'itemCode and quantity required'});
   }
-  const record = {
-    id: crypto.randomUUID(),
-    timestamp: new Date().toISOString(),
-    itemCode, brand, description, quantity, price
-  };
+  const record = { id:crypto.randomUUID(), timestamp:new Date().toISOString(),
+                   itemCode, brand, description, quantity, price };
   store[key].push(record);
-  writeJSON(DATA_PATH, store);
-  res.json({ success:true, record });
+  writeJSON(DATA_PATH,store);
+  res.json({success:true,record});
 });
 
 // Get records for one list
-app.get('/api/shrink/:list', (req,res) => {
+app.get('/api/shrink/:list', (req,res)=>{
   const store = readJSON(DATA_PATH);
   res.json(store[slug(req.params.list)] || []);
 });
 
-// Delete one list
-app.delete('/api/shrink/:list', (req,res) => {
-  const key   = slug(req.params.list);
+// Delete list
+app.delete('/api/shrink/:list', (req,res)=>{
   const store = readJSON(DATA_PATH);
-  store[key] = [];
-  writeJSON(DATA_PATH, store);
-  res.json({ success:true });
+  store[slug(req.params.list)] = [];
+  writeJSON(DATA_PATH,store);
+  res.json({success:true});
 });
 
-// Export CSV for one list
-app.get('/api/shrink/:list/export', (req,res) => {
-  const key   = slug(req.params.list);
+// Export single list CSV
+app.get('/api/shrink/:list/export', (req,res)=>{
+  const key = slug(req.params.list);
   const store = readJSON(DATA_PATH);
-  const headers = ['id','timestamp','itemCode','brand','description','quantity','price'];
-  const esc = v => \`\${String(v ?? '').replace(/"/g,'""')}\`;
-
-  const rows = (store[key] || []).map(r => headers.map(h => esc(r[h])).join(','));
-  const csv  = [headers.join(','), ...rows].join('\n');
-
+  const headers=['id','timestamp','itemCode','brand','description','quantity','price'];
+  const rows = (store[key]||[]).map(r=>headers.map(h=>esc(r[h])).join(','));
+  const csv  = [headers.join(','),...rows].join('\n');
   res.status(200).set({
-    'Cache-Control':       'no-store',
-    'Content-Type':        'text/csv; charset=utf-8',
-    'Content-Disposition': \`attachment; filename="shrink_\${key}.csv"\`
+    'Cache-Control':'no-store',
+    'Content-Type':'text/csv; charset=utf-8',
+    'Content-Disposition':`attachment; filename="shrink_${key}.csv"`
   }).send(csv);
 });
 
-// ── Start server ─────────────────────────────────────────────────
-app.listen(PORT, () => console.log('Inventory Shrink app running on port', PORT));
+// Start server
+app.listen(PORT, ()=> console.log('Inventory Shrink app running on port',PORT));
