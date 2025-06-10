@@ -38,10 +38,14 @@ const readJSON  = p => JSON.parse(fs.readFileSync(p, 'utf-8'));
 const writeJSON = (p, o) => fs.writeFileSync(p, JSON.stringify(o, null, 2));
 const slug      = s => s.trim().toUpperCase();
 const esc       = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
-// Compare only the YYYY-MM-DD portion so times don’t leak the day boundary
+// ─── New local‐date inRange helper ────────────────────────────────────
 const inRange = (ts, from, to) => {
-  const day = new Date(ts).toISOString().slice(0, 10);
-  return (!from || day >= from) && (!to || day <= to);
+  const t      = new Date(ts);
+  // local start at 00:00:00
+  const start  = from ? new Date(`${from}T00:00:00`) : null;
+  // local end   at 23:59:59.999
+  const end    = to   ? new Date(`${to}T23:59:59.999`) : null;
+  return (!start || t >= start) && (!end || t <= end);
 };
 
 // Middleware
