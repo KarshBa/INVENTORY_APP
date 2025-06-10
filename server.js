@@ -38,11 +38,10 @@ const readJSON  = p => JSON.parse(fs.readFileSync(p, 'utf-8'));
 const writeJSON = (p, o) => fs.writeFileSync(p, JSON.stringify(o, null, 2));
 const slug      = s => s.trim().toUpperCase();
 const esc       = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
-const inRange   = (ts, from, to) => {
-  const t = new Date(ts).getTime();
-  const okFrom = !from || t >= new Date(from).getTime();
-  const okTo   = !to   || t <= new Date(to).getTime() + 86_399_999;
-  return okFrom && okTo;
+// Compare only the YYYY-MM-DD portion so times don’t leak the day boundary
+const inRange = (ts, from, to) => {
+  const day = new Date(ts).toISOString().slice(0, 10);
+  return (!from || day >= from) && (!to || day <= to);
 };
 
 // Middleware
