@@ -7,15 +7,21 @@ const listSelect  = document.getElementById('listSelect');
 const startInput  = document.getElementById('startDate');
 const endInput    = document.getElementById('endDate');
 
-/* --- helper: set default Sun-Sat range --- */
-(function initWeek () {
-  const today = new Date();
-  const start = new Date(today);
-  start.setDate(today.getDate() - today.getDay());      // Sunday
-  const end   = new Date(start);
-  end.setDate(start.getDate() + 6);                     // Saturday
-  startInput.value = start.toISOString().slice(0,10);
-  endInput.value   = end.toISOString().slice(0,10);
+// ───── replace your existing initWeek() IIFE with this ─────
+(function initPrevWeek() {
+  const today          = new Date();
+  // find this week’s Sunday
+  const thisSunday     = new Date(today);
+  thisSunday.setDate(today.getDate() - today.getDay());
+  // go back 7 days = last week’s Sunday
+  const prevSunday     = new Date(thisSunday);
+  prevSunday.setDate(thisSunday.getDate() - 7);
+  // last week’s Saturday = 6 days after
+  const prevSaturday   = new Date(prevSunday);
+  prevSaturday.setDate(prevSunday.getDate() + 6);
+
+  startInput.value = prevSunday.toISOString().slice(0,10);
+  endInput.value   = prevSaturday.toISOString().slice(0,10);
 })();
 
 async function populateLists () {
