@@ -5,6 +5,11 @@ const detailForm=document.getElementById('detail-form');
 const successMsg=document.getElementById('success-msg');
 let currentItemCode='';
 
+// Focus the “Enter Item Code” field on page load
+window.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('itemCode').focus();
+});
+
 // load lists
 fetch('/api/departments').then(r=>r.json()).then(lists=>{
   lists.forEach(l=>{
