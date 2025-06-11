@@ -44,6 +44,8 @@ detailForm.addEventListener('submit',async e=>{
     successMsg.classList.remove('hidden');
     detailForm.reset(); detailForm.classList.add('hidden');
     codeForm.reset(); codeForm.classList.remove('hidden');
+      // Move cursor back to the Item Code field:
+  document.getElementById('itemCode').focus();
   }else{
     alert('Error saving record');
   }
