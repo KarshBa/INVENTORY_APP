@@ -19,32 +19,29 @@ fetch('/api/departments').then(r=>r.json()).then(lists=>{
   });
 });
 
+// ── code-form submit ─────────────────────────────────────────────
 codeForm.addEventListener('submit', async e => {
   e.preventDefault();
+
+  // 1️⃣ capture the code the user typed
   currentItemCode = document.getElementById('itemCode').value.trim();
   if (!currentItemCode) return;
 
-  // try server-side lookup
+  // 2️⃣ ask the server whether that code exists in item_list.csv
   let hit = null;
   try {
     const r = await fetch('/api/item/' + encodeURIComponent(currentItemCode));
-    if (r.ok) hit = await r.json();
-  } catch (_) { /* network errors ignored */ }
+    if (r.ok) hit = await r.json();                      // ← will be null/{} if not found
+  } catch { /* ignore any network error */ }
 
-  // pre-fill fields if match found, otherwise clear them
-  if (hit) {
-    document.getElementById('brand').value       = hit.brand       || '';
-    document.getElementById('description').value = hit.description || '';
-    document.getElementById('price').value       = hit.price       || '';
-  } else {
-    document.getElementById('brand').value =
-    document.getElementById('description').value =
-    document.getElementById('price').value       = '';
-  }
+  // 3️⃣ pre-fill the form if we got a match, otherwise clear fields
+  document.getElementById('brand').value       = hit?.brand       || '';
+  document.getElementById('description').value = hit?.description || '';
+  document.getElementById('price').value       = hit?.price       || '';
 
+  // 4️⃣ swap forms & place cursor in Quantity
   codeForm.classList.add('hidden');
   detailForm.classList.remove('hidden');
-  // cursor goes straight to Quantity so the user types only the shrink amount
   document.getElementById('quantity').focus();
 });
 
