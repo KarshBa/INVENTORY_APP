@@ -19,13 +19,33 @@ fetch('/api/departments').then(r=>r.json()).then(lists=>{
   });
 });
 
-codeForm.addEventListener('submit',e=>{
+codeForm.addEventListener('submit', async e => {
   e.preventDefault();
-  currentItemCode=document.getElementById('itemCode').value.trim();
-  if(!currentItemCode) return;
+  currentItemCode = document.getElementById('itemCode').value.trim();
+  if (!currentItemCode) return;
+
+  // try server-side lookup
+  let hit = null;
+  try {
+    const r = await fetch('/api/item/' + encodeURIComponent(currentItemCode));
+    if (r.ok) hit = await r.json();
+  } catch (_) { /* network errors ignored */ }
+
+  // pre-fill fields if match found, otherwise clear them
+  if (hit) {
+    document.getElementById('brand').value       = hit.brand       || '';
+    document.getElementById('description').value = hit.description || '';
+    document.getElementById('price').value       = hit.price       || '';
+  } else {
+    document.getElementById('brand').value =
+    document.getElementById('description').value =
+    document.getElementById('price').value       = '';
+  }
+
   codeForm.classList.add('hidden');
   detailForm.classList.remove('hidden');
-  document.getElementById('brand').focus();
+  // cursor goes straight to Quantity so the user types only the shrink amount
+  document.getElementById('quantity').focus();
 });
 
 detailForm.addEventListener('submit',async e=>{
