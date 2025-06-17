@@ -27,30 +27,44 @@ fs.mkdirSync(path.dirname(DEPT_PATH), { recursive: true });
 fs.writeFileSync(DEPT_PATH, JSON.stringify(DEPARTMENTS, null, 2));
 
 // ────────────────────────────────────────────────────────────────
-//  ITEM LOOK-UP  (reads item_list.csv once and keeps it in memory)
+//  load master item list  (reads item_list.csv once and keeps it in memory)
 // ----------------------------------------------------------------
-import { parse as csvParse } from 'csv-parse/sync';   // same package
+import { parse } from 'csv-parse/sync';              // keep this import
 
-// read CSV once at boot
-const ITEM_CSV_PATH = path.join(__dirname, 'item_list.csv');
-let ITEM_MAP = {};
-try {
-  const csvText  = fs.readFileSync(ITEM_CSV_PATH, 'utf-8');
-  const rows     = csvParse(csvText, { columns: true, trim: true });
-rows.forEach(r => {
-/***************  load master item list  ***************/
-// normalise headers from your CSV export
-const clean = s => String(s||"").replace(/\"/g, "").trim().toLowerCase();
+const ITEM_CSV_PATH = path.join(__dirname,'item_list.csv');
+
+// helper to normalise header names
+const clean  = s => String(s||"").replace(/"/g,"").trim().toLowerCase();
 const wanted = {
   code : ["main code"],
   brand: ["main item-brand"],
   description: ["main item-description"],
   price: ["price-regular-price"],
-  subdept: ["sub-department-number"]    // column AS in your CSV
+  subdept: ["sub-department-number"]
 };
-});
-  console.log(`[Shrink-App] loaded ${rows.length} items from item_list.csv`);
-} catch (err) {
+const pick = (row, aliases) =>
+  aliases.reduce((v,a)=>v??row[Object.keys(row).find(k=>clean(k)===a)],undefined);
+
+const masterItems = new Map();                       // ← will replace ITEM_MAP
+try{
+  const csv  = fs.readFileSync(ITEM_CSV_PATH,'utf8');
+  const rows = parse(csv,{columns:true,skip_empty_lines:true});
+
+  rows.forEach(r=>{
+    // UPCs in your file are 13-digit, so always left-pad to 13
+    const code = String(pick(r,wanted.code)||"").padStart(13,"0");
+    if(!code) return;
+
+    masterItems.set(code,{
+      code,
+      brand:       pick(r,wanted.brand)       ?? "",
+      description: pick(r,wanted.description) ?? "",
+      price:       parseFloat(pick(r,wanted.price) || 0) || "",
+      subdept:     pick(r,wanted.subdept)     ?? ""
+    });
+  });
+  console.log(`[Shrink-App] loaded ${masterItems.size} items from item_list.csv`);
+}catch(err){
   console.warn('[Shrink-App] item_list.csv not found / unreadable → look-ups disabled');
 }
 
