@@ -53,11 +53,8 @@ rows.forEach(r => {
 }
 
 app.get('/api/item/:code', (req, res) => {
-  const key = norm(req.params.code);       // use the same normaliser
-  // optional debug line – remove when happy
-  // console.log('[lookup]', req.params.code, '→', ITEM_MAP[key] ? 'hit' : 'miss');
-
-  res.json(ITEM_MAP[key] || {});           // {}  means “not found”
+  const code = norm(req.params.code);      // ← use the same helper
+  res.json(ITEM_MAP[code] || {});          // {}  means “not found”
 });
 
 // Initialise store
