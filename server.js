@@ -26,32 +26,37 @@ let DEPARTMENTS = fs.existsSync(DEPT_PATH)
 fs.mkdirSync(path.dirname(DEPT_PATH), { recursive: true });
 fs.writeFileSync(DEPT_PATH, JSON.stringify(DEPARTMENTS, null, 2));
 
-/* ─── One-time load of item_list.csv ─────────────────────────────── */
-import readline from 'readline';
+// ────────────────────────────────────────────────────────────────
+//  ITEM LOOK-UP  (reads item_list.csv once and keeps it in memory)
+// ----------------------------------------------------------------
+import csvParse from 'csv-parse/sync';   //  npm i csv-parse --save
 
-const ITEM_MAP = new Map();   // key → { brand, description, price }
-
-(() => {
-  const CSV_PATH = path.join(__dirname, 'item_list.csv');
-  if (!fs.existsSync(CSV_PATH)) return;           // silent if file missing
-
-  const rl = readline.createInterface({
-    input: fs.createReadStream(CSV_PATH),
-    crlfDelay: Infinity
+// read CSV once at boot
+const ITEM_CSV_PATH = path.join(__dirname, 'item_list.csv');
+let ITEM_MAP = {};
+try {
+  const csvText  = fs.readFileSync(ITEM_CSV_PATH, 'utf-8');
+  const rows     = csvParse.parse(csvText, { columns: true, trim: true });
+  //   *** use your real header names here ***
+  rows.forEach(r => {
+    const code = String(r['Main code'] ?? '').trim();
+    if (!code) return;
+    ITEM_MAP[code] = {
+      brand:       r['Main item-Brand']       ?? '',
+      description: r['Main item-Description'] ?? '',
+      price:       r['Price-Regular-Price']   ?? ''
+    };
   });
+  console.log(`[Shrink-App] loaded ${rows.length} items from item_list.csv`);
+} catch (err) {
+  console.warn('[Shrink-App] item_list.csv not found / unreadable → look-ups disabled');
+}
 
-  rl.on('line', line => {
-    // expected header: itemCode,brand,description,price
-    const [code, brand, desc, price] = line.split(',');
-    if (code && code !== 'itemCode') {
-      ITEM_MAP.set(code.trim(), {
-        brand:       (brand || '').trim(),
-        description: (desc  || '').trim(),
-        price:       parseFloat(price) || ''
-      });
-    }
-  });
-})();
+// GET /api/item/:code  →  { brand, description, price } | {}
+app.get('/api/item/:code', (req, res) => {
+  const code = String(req.params.code).trim();
+  res.json(ITEM_MAP[code] || {});          // empty object == “not found”
+});
 
 // Initialise store
 if (!fs.existsSync(DATA_PATH)) {
