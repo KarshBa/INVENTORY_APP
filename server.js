@@ -26,6 +26,33 @@ let DEPARTMENTS = fs.existsSync(DEPT_PATH)
 fs.mkdirSync(path.dirname(DEPT_PATH), { recursive: true });
 fs.writeFileSync(DEPT_PATH, JSON.stringify(DEPARTMENTS, null, 2));
 
+/* ─── One-time load of item_list.csv ─────────────────────────────── */
+import readline from 'readline';
+
+const ITEM_MAP = new Map();   // key → { brand, description, price }
+
+(() => {
+  const CSV_PATH = path.join(__dirname, 'item_list.csv');
+  if (!fs.existsSync(CSV_PATH)) return;           // silent if file missing
+
+  const rl = readline.createInterface({
+    input: fs.createReadStream(CSV_PATH),
+    crlfDelay: Infinity
+  });
+
+  rl.on('line', line => {
+    // expected header: itemCode,brand,description,price
+    const [code, brand, desc, price] = line.split(',');
+    if (code && code !== 'itemCode') {
+      ITEM_MAP.set(code.trim(), {
+        brand:       (brand || '').trim(),
+        description: (desc  || '').trim(),
+        price:       parseFloat(price) || ''
+      });
+    }
+  });
+})();
+
 // Initialise store
 if (!fs.existsSync(DATA_PATH)) {
   const init = {};
@@ -47,6 +74,13 @@ const inRange = (ts, from, to) => {
   const end    = to   ? new Date(`${to}T23:59:59.999`) : null;
   return (!start || t >= start) && (!end || t <= end);
 };
+
+// ─── GET /api/item/<code> → matching row from item_list.csv ───────
+app.get('/api/item/:code', (req, res) => {
+  const hit = ITEM_MAP.get(req.params.code.trim());
+  if (hit) return res.json(hit);
+  res.status(404).json({ error: 'not-found' });
+});
 
 // Middleware
 app.use(express.json());
