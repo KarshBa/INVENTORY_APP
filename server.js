@@ -69,8 +69,8 @@ try{
 }
 
 app.get('/api/item/:code', (req, res) => {
-  const code = norm(req.params.code);      // ← use the same helper
-  res.json(ITEM_MAP[code] || {});          // {}  means “not found”
+  const code = String(req.params.code).trim();
+  res.json(ITEM_MAP[code] || {});          // empty object == “not found”
 });
 
 // Initialise store
