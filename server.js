@@ -38,14 +38,16 @@ try {
   const csvText  = fs.readFileSync(ITEM_CSV_PATH, 'utf-8');
   const rows     = csvParse(csvText, { columns: true, trim: true });
 rows.forEach(r => {
-  const raw = r['Main code'];          // whatever is in the CSV cell
-  const key = norm(raw);               // ← normalised
-  if (!key) return;
-  ITEM_MAP[key] = {
-    brand:       r["Main item-Brand"]       ?? '',
-    description: r["Main item-Description"] ?? '',
-    price:       r["Price-Regular-Price"]   ?? ''
-  };
+/***************  load master item list  ***************/
+// normalise headers from your CSV export
+const clean = s => String(s||"").replace(/\"/g, "").trim().toLowerCase();
+const wanted = {
+  code : ["main code"],
+  brand: ["main item-brand"],
+  description: ["main item-description"],
+  price: ["price-regular-price"],
+  subdept: ["sub-department-number"]    // column AS in your CSV
+};
 });
   console.log(`[Shrink-App] loaded ${rows.length} items from item_list.csv`);
 } catch (err) {
