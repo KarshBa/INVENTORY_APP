@@ -69,8 +69,8 @@ try{
 }
 
 app.get('/api/item/:code', (req, res) => {
-  const code = String(req.params.code).trim();
-  res.json(ITEM_MAP[code] || {});          // empty object == “not found”
+  const code = norm(req.params.code).padStart(13,'0');
+  res.json(masterItems.get(code) || {});          // empty object == “not found”
 });
 
 // Initialise store
