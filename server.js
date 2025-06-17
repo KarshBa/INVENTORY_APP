@@ -37,25 +37,27 @@ let ITEM_MAP = {};
 try {
   const csvText  = fs.readFileSync(ITEM_CSV_PATH, 'utf-8');
   const rows     = csvParse(csvText, { columns: true, trim: true });
-  //   *** use your real header names here ***
-  rows.forEach(r => {
-    const code = String(r['Main code'] ?? '').trim();
-    if (!code) return;
-    ITEM_MAP[code] = {
-      brand:       r['Main item-Brand']       ?? '',
-      description: r['Main item-Description'] ?? '',
-      price:       r['Price-Regular-Price']   ?? ''
-    };
-  });
+rows.forEach(r => {
+  const raw = r['Main code'];          // whatever is in the CSV cell
+  const key = norm(raw);               // ← normalised
+  if (!key) return;
+  ITEM_MAP[key] = {
+    brand:       r["Main item-Brand"]       ?? '',
+    description: r["Main item-Description"] ?? '',
+    price:       r["Price-Regular-Price"]   ?? ''
+  };
+});
   console.log(`[Shrink-App] loaded ${rows.length} items from item_list.csv`);
 } catch (err) {
   console.warn('[Shrink-App] item_list.csv not found / unreadable → look-ups disabled');
 }
 
-// GET /api/item/:code  →  { brand, description, price } | {}
 app.get('/api/item/:code', (req, res) => {
-  const code = String(req.params.code).trim();
-  res.json(ITEM_MAP[code] || {});          // empty object == “not found”
+  const key = norm(req.params.code);       // use the same normaliser
+  // optional debug line – remove when happy
+  // console.log('[lookup]', req.params.code, '→', ITEM_MAP[key] ? 'hit' : 'miss');
+
+  res.json(ITEM_MAP[key] || {});           // {}  means “not found”
 });
 
 // Initialise store
@@ -70,6 +72,10 @@ const readJSON  = p => JSON.parse(fs.readFileSync(p, 'utf-8'));
 const writeJSON = (p, o) => fs.writeFileSync(p, JSON.stringify(o, null, 2));
 const slug      = s => s.trim().toUpperCase();
 const esc       = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+// normalise an item code → remove everything except digits, then drop leading 0s
+const norm = s => String(s ?? '')
+                    .replace(/\D/g,'')   // keep digits only
+                    .replace(/^0+/, ''); // strip leading zeros
 // ─── New local‐date inRange helper ────────────────────────────────────
 const inRange = (ts, from, to) => {
   const t      = new Date(ts);
