@@ -29,14 +29,14 @@ fs.writeFileSync(DEPT_PATH, JSON.stringify(DEPARTMENTS, null, 2));
 // ────────────────────────────────────────────────────────────────
 //  ITEM LOOK-UP  (reads item_list.csv once and keeps it in memory)
 // ----------------------------------------------------------------
-import csvParse from 'csv-parse/sync';   //  npm i csv-parse --save
+import { parse as csvParse } from 'csv-parse/sync';   // same package
 
 // read CSV once at boot
 const ITEM_CSV_PATH = path.join(__dirname, 'item_list.csv');
 let ITEM_MAP = {};
 try {
   const csvText  = fs.readFileSync(ITEM_CSV_PATH, 'utf-8');
-  const rows     = csvParse.parse(csvText, { columns: true, trim: true });
+  const rows     = csvParse(csvText, { columns: true, trim: true });
   //   *** use your real header names here ***
   rows.forEach(r => {
     const code = String(r['Main code'] ?? '').trim();
@@ -79,13 +79,6 @@ const inRange = (ts, from, to) => {
   const end    = to   ? new Date(`${to}T23:59:59.999`) : null;
   return (!start || t >= start) && (!end || t <= end);
 };
-
-// ─── GET /api/item/<code> → matching row from item_list.csv ───────
-app.get('/api/item/:code', (req, res) => {
-  const hit = ITEM_MAP.get(req.params.code.trim());
-  if (hit) return res.json(hit);
-  res.status(404).json({ error: 'not-found' });
-});
 
 // Middleware
 app.use(express.json());
