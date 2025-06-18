@@ -52,11 +52,16 @@ async function loadData () {
   tbody.innerHTML = '';
   data.slice().reverse().forEach(r => {
     const tr = document.createElement('tr');
-    tr.innerHTML =
-      `<td>${new Date(r.timestamp).toLocaleString()}</td>
-       <td>${r.itemCode}</td><td>${r.brand||''}</td>
-       <td>${r.description||''}</td><td>${r.quantity}</td>
-       <td>${r.price??''}</td>`;
+    tr.innerHTML = `
+  <td>${new Date(r.timestamp).toLocaleString()}</td>
+  <td>${r.itemCode}</td>
+  <td>${r.brand || ''}</td>
+  <td>${r.description || ''}</td>
+  <td>${r.quantity}</td>
+  <td>${r.price ?? ''}</td>
+  <td>
+      <button class="del" data-id="${r.id}">🗑️</button>
+  </td>`;
     tbody.appendChild(tr);
   });
   if (data.length===0) tbody.innerHTML =
@@ -78,6 +83,24 @@ clearBtn.addEventListener('click', async () => {
   if (!confirm(`Delete all records in "${listSelect.value}" for this date range?`)) return;
   await fetch(`/api/shrink/${encodeURIComponent(listSelect.value)}?${query()}`, { method:'DELETE' });
   loadData();
+});
+
+/* — single-record delete via 🗑️ button — */
+tbody.addEventListener('click', async ev => {
+  // walk up from whatever was clicked until we hit a <button class="del">
+  const btn = ev.target.closest('button.del[data-id]');
+  if (!btn) return;                              // click was somewhere else
+
+  const recId = btn.dataset.id;                  // value we put in data-id=""
+  const list  = listSelect.value;
+
+  if (!confirm('Delete this record?')) return;    // user bailed out
+
+  const url  = `/api/shrink/${encodeURIComponent(list)}/${recId}`;
+  const resp = await fetch(url, { method: 'DELETE' });
+
+  if (resp.ok) loadData();                       // refresh table
+  else         alert('Delete failed');
 });
 
 populateLists();
