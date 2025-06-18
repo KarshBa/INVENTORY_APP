@@ -35,7 +35,7 @@ codeForm.addEventListener('submit', async e => {
   // 2️⃣ ask the server whether that code exists in item_list.csv
   let hit = null;
   try {
-    const r = await fetch('/api/item/'  encodeURIComponent(currentItemCode));
+    const r = await fetch('/api/item/' + encodeURIComponent(currentItemCode));
     if (r.ok) hit = await r.json();                      // ← will be null/{} if not found
   } catch { /* ignore any network error */ }
 
@@ -64,7 +64,7 @@ detailForm.addEventListener('submit',async e=>{
     price:document.getElementById('price').value===''?null:parseFloat(document.getElementById('price').value)
   };
   const listName=listSelect.value;
-  const res=await fetch('/api/shrink/'encodeURIComponent(listName),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  const res = await fetch('/api/shrink/' + encodeURIComponent(listName), {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
   if(res.ok){
     successMsg.textContent=`Shrink recorded to "${listName}" successfully!`;
     successMsg.classList.remove('hidden');
