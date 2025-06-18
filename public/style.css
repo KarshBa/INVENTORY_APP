@@ -42,3 +42,13 @@ button:hover { background: #005fa3; }
   color: green;
   font-weight: bold;
 }
+button.del{
+  width:auto;            /* keeps icon-button small             */
+  background:#cc0000;    /* red                                 */
+  color:#fff;            /* white icon/text                     */
+  border:none;
+  border-radius:4px;
+  padding:0.25rem 0.5rem;
+  cursor:pointer;
+}
+button.del:hover{ background:#a30000; }  /* darker on hover */
