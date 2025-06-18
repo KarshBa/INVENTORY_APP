@@ -42,3 +42,12 @@ button:hover { background: #005fa3; }
   color: green;
   font-weight: bold;
 }
+button.del{
+  background-color:#cc0000 !important;
+  color:#fff;
+  border:none;
+  border-radius:4px;
+  padding:0.25rem 0.5rem;
+  cursor:pointer;
+}
+button.del:hover{ background-color:#a30000 !important; }
