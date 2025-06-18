@@ -16,16 +16,19 @@
       <select id="listSelect"></select>
     </div>
 
-    <form id="detail-form" class="card hidden">
+    <!--  user.html  — keep everything else the same, only replace this <form>  -->
+<form id="detail-form" class="card hidden">
+
   <div class="field">
     <label for="subdept">Sub-Department</label>
     <input type="text" id="subdept" readonly />
   </div>
 
+  <!-- ⭐ you need this wrapper -->
   <div class="field">
     <label for="brand">Brand</label>
     <input type="text" id="brand" />
-  </div>
+  </div>                           <!-- ⭐ and this closing </div> -->
 
   <div class="field">
     <label for="description">Description</label>
@@ -38,7 +41,7 @@
   </div>
 
   <div class="field">
-    <label for="price">Price&nbsp;($)</label>
+    <label for="price">Price ($)</label>
     <input type="number" step="0.01" id="price" />
   </div>
 
