@@ -158,7 +158,7 @@ app.get('/api/shrink/export-all', (req, res) => {
    });
   }
 
-  const totalRow = ['TOTAL','','','','','','','',esc(total.toFixed(2))].join(',');
+  const totalRow = ['SHRINK TOTAL','','','','','','','',esc(total.toFixed(2))].join(',');
 
   const csv = [headers.join(','), ...rows, totalRow].join('\n');
   res.status(200).set({
@@ -260,7 +260,7 @@ total += qty * price;
       ].join(',');
     });
 
-  const totalRow = ['TOTAL','','','','','','',esc(total.toFixed(2))].join(',');
+  const totalRow = ['SHRINK TOTAL','','','','','','',esc(total.toFixed(2))].join(',');
 
   const csv = [headers.join(','), ...rows, totalRow].join('\n');
   res.status(200).set({
