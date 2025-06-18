@@ -137,7 +137,7 @@ app.get('/api/shrink/export-all', (req, res) => {
   const store   = readJSON(DATA_PATH);
 
   const headers = ['list','id','timestamp','itemCode','brand',
-                   'description','quantity','price'];
+                   'description','quantity','price','total'];   // ⬅️ new column
   const esc     = v => `"${String(v ?? '').replace(/"/g,'""')}"`;
 
   const rows   = [];
@@ -145,16 +145,20 @@ app.get('/api/shrink/export-all', (req, res) => {
 
   for (const [list, arr] of Object.entries(store)) {
     arr.filter(r => inRange(r.timestamp, from, to))
-       .forEach(r => {
-const qty   = parseFloat(r.quantity) || 0;
-const price = parseFloat(r.price)     || 0;
-total += qty * price;
-         rows.push([list, r.id, r.timestamp, r.itemCode, r.brand,
-                    r.description, r.quantity, r.price].map(esc).join(','));
-       });
+   .forEach(r => {
+     const qty      = parseFloat(r.quantity) || 0;
+     const price    = parseFloat(r.price)    || 0;
+     const lineTot  = qty * price;
+     total += lineTot;
+
+     rows.push([
+       list, r.id, r.timestamp, r.itemCode, r.brand,
+       r.description, r.quantity, r.price, lineTot.toFixed(2)
+     ].map(esc).join(','));
+   });
   }
 
-  const totalRow = ['TOTAL','','','','','','',esc(total.toFixed(2))].join(',');
+  const totalRow = ['TOTAL','','','','','','','',esc(total.toFixed(2))].join(',');
 
   const csv = [headers.join(','), ...rows, totalRow].join('\n');
   res.status(200).set({
@@ -235,7 +239,7 @@ app.get('/api/shrink/:list/export', (req, res) => {
   const store   = readJSON(DATA_PATH);
 
   const headers = ['id','timestamp','itemCode','brand',
-                   'description','quantity','price'];
+                   'description','quantity','price','total'];   // ⬅️ new column
   let   total   = 0;
 
   const rows = (store[listKey] || [])
@@ -244,10 +248,19 @@ app.get('/api/shrink/:list/export', (req, res) => {
 const qty   = parseFloat(r.quantity) || 0;
 const price = parseFloat(r.price)     || 0;
 total += qty * price;
-      return headers.map(h => esc(r[h])).join(',');
+            return [
+        esc(r.id),
+        esc(r.timestamp),
+        esc(r.itemCode),
+        esc(r.brand),
+        esc(r.description),
+        esc(r.quantity),
+        esc(r.price),
+        esc((qty * price).toFixed(2))        // new per-row total
+      ].join(',');
     });
 
-  const totalRow = ['TOTAL','','','','','',esc(total.toFixed(2))].join(',');
+  const totalRow = ['TOTAL','','','','','','',esc(total.toFixed(2))].join(',');
 
   const csv = [headers.join(','), ...rows, totalRow].join('\n');
   res.status(200).set({
