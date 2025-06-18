@@ -11,10 +11,12 @@
   <div class="container">
     <h1>Inventory Shrink Tracker</h1>
 
-    <div class="card">
-      <label for="listSelect">Select List</label>
-      <select id="listSelect"></select>
-    </div>
+    <!-- Add the Code-Entry form here -->
+<form id="code-form" class="card">
+  <label for="itemCode">Enter Item Code</label>
+  <input type="text" id="itemCode" required />
+  <button type="submit">Next</button>
+</form>
 
     <!--  user.html  — keep everything else the same, only replace this <form>  -->
 <form id="detail-form" class="card hidden">
