@@ -38,6 +38,10 @@ codeForm.addEventListener('submit', async e => {
   document.getElementById('brand').value       = hit?.brand       || '';
   document.getElementById('description').value = hit?.description || '';
   document.getElementById('price').value       = hit?.price       || '';
+  document.getElementById('subdept').value     = hit?.subdept     || '';
+
+  // auto-select list if server tells us which one
+  if (hit?.list) listSelect.value = hit.list;
 
   // 4️⃣ swap forms & place cursor in Quantity
   codeForm.classList.add('hidden');
