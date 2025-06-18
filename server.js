@@ -172,6 +172,26 @@ app.get('/api/shrink/:list', (req, res) => {
   res.json(rows);
 });
 
+// ── NEW: delete ONE record by ID ────────────────────────────────
+app.delete('/api/shrink/:list/:id', (req, res) => {
+  const key   = slug(req.params.list);
+  const recId = req.params.id;
+  const store = readJSON(DATA_PATH);
+
+  if (!store[key]) {
+    return res.status(404).json({ error: 'list-not-found' });
+  }
+
+  const before = store[key].length;
+  store[key]   = store[key].filter(r => r.id !== recId);
+
+  if (store[key].length === before) {
+    return res.status(404).json({ error: 'record-not-found' });
+  }
+
+  writeJSON(DATA_PATH, store);
+  res.json({ success: true });
+});
 // Delete records in range or entire list
 app.delete('/api/shrink/:list', (req, res) => {
   const { from, to } = req.query;
