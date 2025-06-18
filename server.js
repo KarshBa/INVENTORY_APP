@@ -49,20 +49,42 @@ const masterItems = new Map();                       // ← will replace ITEM_MA
 try{
   const csv  = fs.readFileSync(ITEM_CSV_PATH,'utf8');
   const rows = parse(csv,{columns:true,skip_empty_lines:true});
+  
+/* ---------------------------------------------------- *
+ * Build SUB_MAP  { "sub-dept-number" → "Shrink List" } *
+ * ---------------------------------------------------- */
+const SUB_MAP = {};
+try {
+  // we already saved departments.json earlier; reuse it
+  const deptCSV = fs.readFileSync(
+      path.join(__dirname, 'DEPARTMENTS.csv'), 'utf8');
+
+  // every line:  Sub-Department-Number, Shrink-List
+  deptCSV.split(/\r?\n/).forEach(line=>{
+    const [sub,list] = line.split(',').map(s=>s.trim());
+    if (sub && list) SUB_MAP[sub] = list.toUpperCase();
+  });
+  console.log(`[Shrink-App] mapped ${Object.keys(SUB_MAP).length} sub-depts`);
+} catch { /* skip silently if file missing */ }
 
   rows.forEach(r=>{
-    // UPCs in your file are 13-digit, so always left-pad to 13
-    const code = String(pick(r,wanted.code)||"").padStart(13,"0");
-    if(!code) return;
+    /* ――― tolerant header lookup ――― */
+  const code = String(pick(r, wanted.code) || '')
+                 .replace(/\D/g,'')        // digits only
+                 .padStart(13,'0');        // keep 13-digit UPC
+  if (!code) return;
 
-    masterItems.set(code,{
-      code,
-      brand:       pick(r,wanted.brand)       ?? "",
-      description: pick(r,wanted.description) ?? "",
-      price:       parseFloat(pick(r,wanted.price) || 0) || "",
-      subdept:     pick(r,wanted.subdept)     ?? ""
-    });
+  const sub = pick(r, wanted.subdept) || '';
+
+  masterItems.set(code, {
+    code,
+    brand:       pick(r, wanted.brand)       || '',
+    description: pick(r, wanted.description) || '',
+    price:       parseFloat(pick(r, wanted.price) || 0) || '',
+    subdept:     sub,
+    list:        SUB_MAP[sub] || ''          // ← NEW
   });
+ });
   console.log(`[Shrink-App] loaded ${masterItems.size} items from item_list.csv`);
 }catch(err){
   console.warn('[Shrink-App] item_list.csv not found / unreadable → look-ups disabled');
