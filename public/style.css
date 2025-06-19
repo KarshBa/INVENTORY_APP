@@ -90,7 +90,12 @@ td.actions,
 th.actions {           /* header + data cell */
   padding: 0;          /* no extra white space around the button */
 }
-
+/* sticky ‘actions’ header should be blue like the rest */
+th.actions {
+  background: #0077cc;   /* same blue as other headers   */
+  color: #fff;           /* keep the white text          */
+  z-index: 2;            /* sit above scrolling cells    */
+}
 /* make the button fill the cell & remove blue focus ring */
 button.del {
   display: block;      /* let width/height take full cell */
