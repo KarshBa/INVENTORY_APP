@@ -59,7 +59,7 @@ async function loadData () {
   <td>${r.description || ''}</td>
   <td>${r.quantity}</td>
   <td>${r.price ?? ''}</td>
-  <td>
+  <td class="actions">
       <button class="del" data-id="${r.id}">🗑️</button>
   </td>`;
     tbody.appendChild(tr);
