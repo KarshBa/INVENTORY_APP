@@ -54,9 +54,9 @@ async function loadData () {
     const tr = document.createElement('tr');
     tr.innerHTML = `
   <td>${new Date(r.timestamp).toLocaleString()}</td>
-  <td>${r.itemCode}</td>
-  <td>${r.brand || ''}</td>
-  <td>${r.description || ''}</td>
+  <td class="code">${r.itemCode}</td>
+  <td class="brand">${r.brand || ''}</td>
+  <td class="description">${r.description || ''}</td>
   <td>${r.quantity}</td>
   <td>${r.price ?? ''}</td>
   <td class="actions">
