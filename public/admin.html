@@ -9,6 +9,17 @@
     table { width: 100%; border-collapse: collapse; }
     th, td { padding: 0.5rem; border-bottom: 1px solid #ddd; }
     th { background:#0077cc; color:#fff; position:sticky; top:0; }
+       /* 👉 keep the delete-button column visible and at a fixed width */
+   th.actions,
+   td.actions  {
+     position: sticky;
+     right: 0;                 /* pin to right-hand edge               */
+     background:#fff;          /* cover text that slides underneath    */
+     width: 75px;              /* pick a width that fits your button   */
+     min-width:75px;
+     text-align:center;
+     z-index:1;                /* keeps header above scrolling cells   */
+   }
     .actions { display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom:1rem; }
     .actions button { flex:1 1 48%; }
     .danger { background:#cc0000; }
@@ -42,7 +53,7 @@
           <tr>
             <th>Time</th><th>Item Code</th><th>Brand</th>
             <th>Description</th><th>Qty</th><th>Price</th>
-            <th style="width:90px;"> </th>
+            <th class="actions"> </th>
           </tr>
         </thead>
         <tbody></tbody>
