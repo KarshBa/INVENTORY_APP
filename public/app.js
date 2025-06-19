@@ -4,7 +4,19 @@ const codeForm=document.getElementById('code-form');
 const detailForm=document.getElementById('detail-form');
 const successMsg=document.getElementById('success-msg');
 let currentItemCode='';
-
+/* ──────────────────────────────────────────────────────────────
+ * normaliseScan(raw)
+ *   – keeps digits only
+ *   – if the scanner gives 12- or 14-digit data, drops the last
+ *     digit (check-digit) → leaves the 11 / 13 data digits
+ *   – finally left-pads to 13 so it matches item_list.csv keys
+ * ---------------------------------------------------------------- */
+function normaliseScan (raw) {
+  let d = String(raw).replace(/\D/g,'');   // strip non-digits
+  if (d.length === 12) d = d.slice(0,-1);  // UPC-A  ➜ 11
+  if (d.length === 14) d = d.slice(0,-1);  // GTIN-14 ➜ 13
+  return d.padStart(13,'0');               // 13-digit key
+}
 // Focus the “Enter Item Code” field on page load
 window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('itemCode').focus();
@@ -29,7 +41,7 @@ codeForm.addEventListener('submit', async e => {
   await deptPromise;
   
   // 1️⃣ capture the code the user typed
-  currentItemCode = document.getElementById('itemCode').value.trim();
+  currentItemCode = normaliseScan(document.getElementById('itemCode').value);
   if (!currentItemCode) return;
 
   // 2️⃣ ask the server whether that code exists in item_list.csv
