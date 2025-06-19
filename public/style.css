@@ -77,7 +77,6 @@ td.actions{
   overflow:hidden;
   text-overflow:ellipsis;
 }
-
 /* ▶ NEW – truncate very long Item Code & Brand cells ◀ */
 #shrink-table td.code,
 #shrink-table td.brand{
@@ -86,3 +85,18 @@ td.actions{
   overflow:hidden;
   text-overflow:ellipsis;
 }
+/* tighten the sticky delete-button cell */
+td.actions,
+th.actions {           /* header + data cell */
+  padding: 0;          /* no extra white space around the button */
+}
+
+/* make the button fill the cell & remove blue focus ring */
+button.del {
+  display: block;      /* let width/height take full cell */
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  outline: none;       /* remove default focus outline */
+}
+button.del:focus { outline: none; }  /* extra safety */
