@@ -52,3 +52,28 @@ button.del{
   cursor:pointer;
 }
 button.del:hover{ background:#a30000; }  /* darker on hover */
+/* keep the delete-button column visible and at a fixed width */
+th.actions,
+td.actions{
+  position:sticky;     /* stay visible when scrolled horizontally */
+  right:0;             /* stick to the far-right edge             */
+  background:#fff;     /* cover text that slides underneath       */
+  width:75px;          /* pick a width that fits your icon/text   */
+  min-width:75px;
+  text-align:center;
+  z-index:1;           /* header/cell stays on top when scrolling */
+}
+
+/* stop other columns wrapping onto multiple lines */
+#shrink-table td:not(.description),
+#shrink-table th:not(.description){
+  white-space:nowrap;
+}
+
+/* optional: ellipsis long descriptions instead of forcing wide cells */
+#shrink-table td.description{
+  max-width:260px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
