@@ -8,7 +8,7 @@ body {
   display: flex;
   justify-content: center;
 }
-.container { max-width: 600px; width: 100%; }
+.container { max-width: 1000px; width: 100%; }
 h1 { text-align: center; }
 .card {
   background: #fff;
