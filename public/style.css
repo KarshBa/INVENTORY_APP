@@ -72,7 +72,7 @@ td.actions{
 
 /* optional: ellipsis long descriptions instead of forcing wide cells */
 #shrink-table td.description{
-  max-width:260px;
+  max-width:180px;
   white-space:nowrap;
   overflow:hidden;
   text-overflow:ellipsis;
@@ -81,7 +81,7 @@ td.actions{
 /* ▶ NEW – truncate very long Item Code & Brand cells ◀ */
 #shrink-table td.code,
 #shrink-table td.brand{
-  max-width:140px;
+  max-width:100px;
   white-space:nowrap;
   overflow:hidden;
   text-overflow:ellipsis;
