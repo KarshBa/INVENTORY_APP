@@ -67,12 +67,21 @@ td.actions{
 /* stop other columns wrapping onto multiple lines */
 #shrink-table td:not(.description),
 #shrink-table th:not(.description){
-  white-space:nowrap;
+  white-space: nowrap;
 }
 
 /* optional: ellipsis long descriptions instead of forcing wide cells */
 #shrink-table td.description{
   max-width:260px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+/* ▶ NEW – truncate very long Item Code & Brand cells ◀ */
+#shrink-table td.code,
+#shrink-table td.brand{
+  max-width:140px;
   white-space:nowrap;
   overflow:hidden;
   text-overflow:ellipsis;
