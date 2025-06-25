@@ -31,25 +31,25 @@ fs.writeFileSync(DEPT_PATH, JSON.stringify(DEPARTMENTS, null, 2));
  * ------------------------------------------------------------ */
 import { parse } from 'csv-parse/sync';
 
-const want = {                 // canonical → possible header texts
-  code:        ['main code'],
-  brand:       ['main item-brand'],
-  description: ['main item-description'],
-  price:       ['price-regular-price'],
-  subdept:     ['sub-department-number']
+const want = {
+  code:        ['maincode'],
+  brand:       ['mainitembrand'],
+  description: ['mainitemdescription'],
+  price:       ['priceregularprice'],
+  subdept:     ['subdepartmentnumber']
 };
 
-// helper: case/space-insensitive header pick
+// helper: strip BOM, lower-case, keep only letters & digits
+const norm = h => h
+  .replace(/^\uFEFF/, '')         // remove UTF-8 BOM if present
+  .toLowerCase()
+  .replace(/[^a-z0-9]/g, '');     // drop everything but a-z & 0-9
+
+// tolerant header lookup
 const pick = (row, aliases) => {
-  const keys = Object.keys(row);
-  for (const alias of aliases) {
-    const k = keys.find(h =>
-      h.replace(/\s+/g, '').toLowerCase() ===
-      alias.replace(/\s+/g, '').toLowerCase()
-    );
-    if (k) return row[k];
-  }
-  return undefined;
+  const want = aliases.map(norm);
+  const hit  = Object.keys(row).find(k => want.includes(norm(k)));
+  return hit ? row[hit] : undefined;
 };
 
 const masterItems = new Map();
