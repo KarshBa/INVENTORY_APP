@@ -26,6 +26,30 @@ let DEPARTMENTS = fs.existsSync(DEPT_PATH)
 fs.mkdirSync(path.dirname(DEPT_PATH), { recursive: true });
 fs.writeFileSync(DEPT_PATH, JSON.stringify(DEPARTMENTS, null, 2));
 
+// ────────────────────────────────────────────────────────────────
+// 1.  Load the master -item list once and keep it in memory
+// ────────────────────────────────────────────────────────────────
+import { parse } from 'csv-parse/sync';
+const masterItems = new Map();
+try {
+  const csv  = fs.readFileSync(path.join(__dirname,'item_list.csv'),'utf8');
+  const rows = parse(csv,{columns:true,skip_empty_lines:true});
+  rows.forEach(r => {
+    const code = String(r['main code'] || '')
+                   .replace(/\D/g,'')       // digits only
+                   .padStart(13,'0');       // 13-digit catalogue code
+    if (!code) return;
+    masterItems.set(code,{
+      code,
+      brand:       r['main item-brand']       || '',
+      description: r['main item-description'] || '',
+      price:       parseFloat(r['price-regular-price']||0) || '',
+      subdept:     r['sub-department-number'] || ''
+    });
+  });
+  console.log(`[Shrink-App] loaded ${masterItems.size} items`);
+} catch { console.warn('[Shrink-App] item_list.csv missing – look-ups disabled'); }
+
 // Initialise store
 if (!fs.existsSync(DATA_PATH)) {
   const init = {};
@@ -38,6 +62,29 @@ const readJSON  = p => JSON.parse(fs.readFileSync(p, 'utf-8'));
 const writeJSON = (p, o) => fs.writeFileSync(p, JSON.stringify(o, null, 2));
 const slug      = s => s.trim().toUpperCase();
 const esc       = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+/* ── variable-weight (scale-label) decoder ────────────────────────────
+ *  UPC-A 12-digit label that starts with “2”.
+ *  Format: 2 + 5-digit PLU + 5-digit price/weight + check-digit
+ *          example 270880507071
+ *            2 70880 50707 1
+ *            |  PLU |price|cd
+ *
+ *  We keep the *first* 7 digits (2 + PLU + first price digit) and turn
+ *  it into the 13-digit “catalogue” code used in item_list.csv:
+ *      00  +  <7-digits> + 0000      ← 13 digits
+ *      2708805  → 0027088050000
+ *
+ *  The sell-price → last 4 of the payload (digits 8-11 of the UPC):
+ *      270880507071  →  0707  →  $7.07
+ */
+const decodeScale = upc => {
+  if (!/^[0-9]{12}$/.test(upc) || upc[0] !== '2') return null;
+
+  const body      = upc.slice(0, -1);          // drop check digit
+  const catCode   = '00' + body.slice(0, 7) + '0000';          // 13-digit lookup
+  const priceCents= parseInt(body.slice(7, 11), 10);           // last-4 digits
+  return { catCode, price: (priceCents / 100).toFixed(2) };
+};
 // ─── New local‐date inRange helper ────────────────────────────────────
 const inRange = (ts, from, to) => {
   const t      = new Date(ts);
@@ -56,6 +103,23 @@ app.use((req, res, next) => {
 });
 app.use(express.static(path.join(__dirname, 'public')));
 
+app.get('/api/item/:code', (req, res) => {
+  const raw = String(req.params.code || '').replace(/\D/g, '');
+
+  // 1️⃣ normal 13-digit catalogue number
+  let hit = masterItems.get(raw.padStart(13, '0'));
+
+  // 2️⃣ variable-weight (scale) label?
+  if (!hit) {
+    const s = decodeScale(raw);       // uses the helper you added above
+    if (s) {
+      hit = { ...(masterItems.get(s.catCode) || {}), price: s.price };
+      hit.code = s.catCode;           // expose the catalogue code we used
+    }
+  }
+
+  res.json(hit || {});                // empty object == “not found”
+});
 // ---- Routes ----
 
 // ─── CSV for ALL lists *with total* ───────────────────────────────
