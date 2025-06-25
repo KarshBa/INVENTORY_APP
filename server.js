@@ -69,17 +69,20 @@ try {
   const rows = parse(csv, { columns: true, skip_empty_lines: true });
 
   rows.forEach(r => {
-    const code    = canon(pick(r, want.code));
+  const code = canon(pick(r, want.code));
 
-    masterItems.set(code, {
-      code,
-      brand:       pick(r, want.brand)       || '',
-      description: pick(r, want.description) || '',
-      price:       parseFloat(pick(r, want.price) || 0) || '',
-      subdept:     pick(r, want.subdept)     || ''
-    });
+  // 🔒 skip blank / invalid rows
+  if (!code || code === '0000000000000') return;
+
+  masterItems.set(code, {
+    code,
+    brand:       pick(r, want.brand)       || '',
+    description: pick(r, want.description) || '',
+    price:       parseFloat(pick(r, want.price) || 0) || '',
+    subdept:     pick(r, want.subdept)     || ''
   });
-
+});
+  
   console.log(`[Shrink-App] loaded ${masterItems.size} items`);
 } catch (err) {
   console.warn('[Shrink-App] item_list.csv unreadable → look-ups disabled', err);
