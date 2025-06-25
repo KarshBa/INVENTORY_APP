@@ -185,20 +185,27 @@ app.use((req, res, next) => {
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/api/item/:code', (req, res) => {
-  const raw = String(req.params.code || '').replace(/\D/g, '');
+  const raw = canon(req.params.code);     // digits → 13-char string
 
-  // 1️⃣ direct lookup
-  let hit = masterItems.get(canon(raw));
+  /* 1️⃣ direct catalogue code ------------------------------------ */
+  let hit = masterItems.get(raw);
 
-  // 2️⃣ scale label fallback
+  /* 2️⃣ scale label? try 7-digit, then 6-digit variant ----------- */
   if (!hit) {
-    const s = decodeScale(raw);
-    if (s) {
-      hit = { ...(masterItems.get(s.catCode) || {}), price: s.price };
-      hit.code = s.catCode;
+    const body = raw.slice(-12);          // 12-digit payload only
+    if (raw[0] === '2') {                 // starts with “2”, so it *is* a scale label
+      const code7 = canon('00' + body.slice(0, 7) + '0000'); // current logic
+      const code6 = canon('00' + body.slice(0, 6) + '0000'); // PLU-only fallback
+      const price = (+body.slice(7, 11) / 100).toFixed(2);   // same calculation
+
+      hit = masterItems.get(code7) || masterItems.get(code6);
+      if (hit) {
+        hit = { ...hit, price, code: hit.code };             // merge price
+      }
     }
   }
-  res.json(hit || {});             // {} => “not found”
+
+  res.json(hit || {});                // {} == not found
 });
 // ---- Routes ----
 
