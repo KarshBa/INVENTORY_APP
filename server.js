@@ -38,20 +38,34 @@ const canon = s => {
 
 /* ------------------------------------------------------------------
  *  Load DEPARTMENTS.csv   (maps sub-dept → top-level list/department)
- *    expected columns :  subdept, list
+ *  File format:
+ *        Col-A  → sub-department number      (e.g. 40, 40110, 07 …)
+ *        Col-B  → list / department name     (e.g. PACKAGE GROCERY)
+ *  (No header row)
  * ------------------------------------------------------------------*/
 import { parse } from 'csv-parse/sync';
 
-const SUB_TO_LIST = new Map();      // "40" → "PRODUCE", …
+const SUB_TO_LIST = new Map();            // "40" → "PACKAGE GROCERY"
 
 try {
-  const depCsv = fs.readFileSync(path.join(__dirname,'DEPARTMENTS.csv'),'utf8');
-  const depRows = parse(depCsv, { columns: true, skip_empty_lines: true });
+  const depCsv  = fs.readFileSync(path.join(__dirname, 'DEPARTMENTS.csv'), 'utf8');
 
-  depRows.forEach(r => {
-    const sub = String(r.subdept || r.Subdept || r['Sub-Dept'] || '').trim();
-    const lst = String(r.list    || r.List    || r.department   || '').trim();
-    if (sub) SUB_TO_LIST.set(sub.slice(0, 2),      lst.toUpperCase());
+  /* rows is now an array of arrays: [ [ '40', 'PACKAGE GROCERY' ], … ] */
+  const rows = parse(depCsv, {
+    columns: false,           // <-- we have NO header row
+    skip_empty_lines: true,
+    trim: true
+  });
+
+  rows.forEach(cells => {
+    const subRaw = cells[0];
+    const list   = cells[1];
+
+    if (!subRaw || !list) return;          // skip incomplete lines
+
+    /* key is *first two* digits, zero-padded, to match item_list */
+    const key = String(subRaw).trim().slice(0, 2).padStart(2, '0');
+    SUB_TO_LIST.set(key, String(list).trim().toUpperCase());
   });
 
   console.log(`[Shrink-App] loaded ${SUB_TO_LIST.size} sub-dept mappings`);
