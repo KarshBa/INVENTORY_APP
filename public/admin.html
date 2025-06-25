@@ -9,18 +9,32 @@
     table { width: 100%; border-collapse: collapse; }
     th, td { padding: 0.5rem; border-bottom: 1px solid #ddd; }
     th { background:#0077cc; color:#fff; position:sticky; top:0; }
+       /* 👉 keep the delete-button column visible and at a fixed width */
+   /*  keep blue bar across the top – header only  */
+th.actions{
+  position:sticky;
+  right:0;
+  background:#0077cc;   /* 🔵 same blue as other headers */
+  color:#fff;
+  width:75px;
+  min-width:75px;
+  text-align:center;
+  z-index:2;            /* sit above scrolling rows      */
+}
+
+/*  data-row cells – stay white and sticky  */
+td.actions{
+  position:sticky;
+  right:0;
+  background:#fff;
+  width:75px;
+  min-width:75px;
+  text-align:center;
+  z-index:1;
+}
     .actions { display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom:1rem; }
     .actions button { flex:1 1 48%; }
     .danger { background:#cc0000; }
-    button.del{
-    background:#cc0000;    /* red */
-    color:#fff;            /* white icon/text */
-    border:none;
-    border-radius:4px;
-    padding:0.25rem 0.5rem;
-    cursor:pointer;
-  }
-  button.del:hover{ background:#a30000; } /* darker on hover */
     .daterow { display:flex; gap:0.5rem; }
     .daterow input { flex:1 1 50%; }
   </style>
@@ -51,6 +65,7 @@
           <tr>
             <th>Time</th><th>Item Code</th><th>Brand</th>
             <th>Description</th><th>Qty</th><th>Price</th>
+            <th class="del-col"></th>
           </tr>
         </thead>
         <tbody></tbody>
