@@ -26,6 +26,16 @@ let DEPARTMENTS = fs.existsSync(DEPT_PATH)
 fs.mkdirSync(path.dirname(DEPT_PATH), { recursive: true });
 fs.writeFileSync(DEPT_PATH, JSON.stringify(DEPARTMENTS, null, 2));
 
+/* ------------------------------------------------------------------
+ * Canonicalise any “code” so it is ALWAYS 13 digits (UPC-A style):
+ *   – keep only 0-9
+ *   – pad OR slice so the result is exactly 13 chars
+ * ------------------------------------------------------------------*/
+const canon = s => {
+  const digits = String(s || '').replace(/\D/g, '');
+  return digits.padStart(13, '0').slice(-13);
+};
+
 /* ------------------------------------------------------------
  *  Load item_list.csv  (tolerant header lookup)
  * ------------------------------------------------------------ */
@@ -59,9 +69,7 @@ try {
   const rows = parse(csv, { columns: true, skip_empty_lines: true });
 
   rows.forEach(r => {
-    const rawCode = pick(r, want.code) || '';
-    const code = String(rawCode).replace(/\D/g, '').padStart(13, '0');
-    if (!code) return;          // skip rows without a usable code
+    const code    = canon(pick(r, want.code));
 
     masterItems.set(code, {
       code,
@@ -108,7 +116,7 @@ const decodeScale = upc => {
   if (!/^[0-9]{12}$/.test(upc) || upc[0] !== '2') return null;
 
   const body      = upc.slice(0, -1);          // drop check digit
-  const catCode   = '00' + body.slice(0, 7) + '0000';          // 13-digit lookup
+  const catCode    = canon('00' + body.slice(0, 7) + '0000');
   const priceCents= parseInt(body.slice(7, 11), 10);           // last-4 digits
   return { catCode, price: (priceCents / 100).toFixed(2) };
 };
@@ -133,19 +141,18 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.get('/api/item/:code', (req, res) => {
   const raw = String(req.params.code || '').replace(/\D/g, '');
 
-  // 1️⃣ normal 13-digit catalogue number
-  let hit = masterItems.get(raw.padStart(13, '0'));
+  // 1️⃣ direct lookup
+  let hit = masterItems.get(canon(raw));
 
-  // 2️⃣ variable-weight (scale) label?
+  // 2️⃣ scale label fallback
   if (!hit) {
-    const s = decodeScale(raw);       // uses the helper you added above
+    const s = decodeScale(raw);
     if (s) {
       hit = { ...(masterItems.get(s.catCode) || {}), price: s.price };
-      hit.code = s.catCode;           // expose the catalogue code we used
+      hit.code = s.catCode;
     }
   }
-
-  res.json(hit || {});                // empty object == “not found”
+  res.json(hit || {});             // {} => “not found”
 });
 // ---- Routes ----
 
