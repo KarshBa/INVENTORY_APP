@@ -143,6 +143,14 @@ const readJSON  = p => JSON.parse(fs.readFileSync(p, 'utf-8'));
 const writeJSON = (p, o) => fs.writeFileSync(p, JSON.stringify(o, null, 2));
 const slug      = s => s.trim().toUpperCase();
 const esc       = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+const fmtLocal = iso =>
+  new Date(iso).toLocaleString('en-US', {
+    // pick whatever zone you want; omit timeZone to use server's
+    timeZone: 'America/Chicago',
+    dateStyle: 'short',
+    timeStyle: 'medium'
+  });
+
 /* ── variable-weight (scale-label) decoder ────────────────────────────
  *  UPC-A 12-digit label that starts with “2”.
  *  Format: 2 + 5-digit PLU + 5-digit price/weight + check-digit
@@ -250,7 +258,7 @@ app.get('/api/shrink/export-all', (req, res) => {
      total += lineTot;
 
      rows.push([
-       list, r.id, r.timestamp, r.itemCode, r.brand,
+       list, r.id, fmtLocal(r.timestamp), r.itemCode, r.brand,
        r.description, r.quantity, r.price, lineTot.toFixed(2)
      ].map(esc).join(','));
    });
@@ -349,7 +357,7 @@ const price = parseFloat(r.price)     || 0;
 total += qty * price;
             return [
         esc(r.id),
-        esc(r.timestamp),
+        esc(fmtLocal(r.timestamp)),
         esc(r.itemCode),
         esc(r.brand),
         esc(r.description),
