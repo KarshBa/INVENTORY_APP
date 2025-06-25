@@ -182,6 +182,14 @@ app.use((req, res, next) => {
   if (req.path.match(/\.(js|css|json)$/)) res.set('Cache-Control', 'no-store');
   next();
 });
+
+app.get('/__debug_favicon', (_req, res) => {
+  const p = path.join(__dirname, 'public', 'favicon.ico');
+  res.sendFile(p, err => {
+    if (err) console.error('Favicon test failed:', err);
+  });
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 /* ------------------------------------------------------------
