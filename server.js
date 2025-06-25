@@ -36,6 +36,33 @@ const canon = s => {
   return digits.padStart(13, '0').slice(-13);
 };
 
+/* ------------------------------------------------------------------
+ *  Load DEPARTMENTS.csv   (maps sub-dept → top-level list/department)
+ *    expected columns :  subdept, list
+ * ------------------------------------------------------------------*/
+import { parse } from 'csv-parse/sync';
+
+const SUB_TO_LIST = new Map();      // "40" → "PRODUCE", …
+
+try {
+  const depCsv = fs.readFileSync(path.join(__dirname,'DEPARTMENTS.csv'),'utf8');
+  const depRows = parse(depCsv, { columns: true, skip_empty_lines: true });
+
+  depRows.forEach(r => {
+    const sub = String(r.subdept || r.Subdept || r['Sub-Dept'] || '').trim();
+    const lst = String(r.list    || r.List    || r.department   || '').trim();
+    if (sub) SUB_TO_LIST.set(sub.padStart(2,'0'), lst.toUpperCase());
+  });
+
+  console.log(`[Shrink-App] loaded ${SUB_TO_LIST.size} sub-dept mappings`);
+} catch (e) {
+  console.warn('[Shrink-App] DEPARTMENTS.csv unreadable – auto-select disabled', e);
+}
+
+/* helper: turn a sub-dept into a list name (default OTHER) */
+const deriveList = sub =>
+  SUB_TO_LIST.get(String(sub).padStart(2,'0').slice(0,2)) || 'OTHER';
+
 /* ------------------------------------------------------------
  *  Load item_list.csv  (tolerant header lookup)
  * ------------------------------------------------------------ */
@@ -68,18 +95,21 @@ try {
   const csv  = fs.readFileSync(path.join(__dirname, 'item_list.csv'), 'utf8');
   const rows = parse(csv, { columns: true, skip_empty_lines: true });
 
-  rows.forEach(r => {
+rows.forEach(r => {
   const code = canon(pick(r, want.code));
 
   // 🔒 skip blank / invalid rows
   if (!code || code === '0000000000000') return;
 
+  const subdept = pick(r, want.subdept) || '';     // ← grab once
+
   masterItems.set(code, {
     code,
-    brand:       pick(r, want.brand)       || '',
+    brand      : pick(r, want.brand)       || '',
     description: pick(r, want.description) || '',
-    price:       parseFloat(pick(r, want.price) || 0) || '',
-    subdept:     pick(r, want.subdept)     || ''
+    price      : parseFloat(pick(r, want.price) || 0) || '',
+    subdept,
+    list       : deriveList(subdept)          // ← **add this line**
   });
 });
   
