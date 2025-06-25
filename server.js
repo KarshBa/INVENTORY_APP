@@ -51,7 +51,7 @@ try {
   depRows.forEach(r => {
     const sub = String(r.subdept || r.Subdept || r['Sub-Dept'] || '').trim();
     const lst = String(r.list    || r.List    || r.department   || '').trim();
-    if (sub) SUB_TO_LIST.set(sub.padStart(2,'0'), lst.toUpperCase());
+    if (sub) SUB_TO_LIST.set(sub.slice(0, 2),      lst.toUpperCase());
   });
 
   console.log(`[Shrink-App] loaded ${SUB_TO_LIST.size} sub-dept mappings`);
