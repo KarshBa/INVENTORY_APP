@@ -66,7 +66,6 @@ const deriveList = sub =>
 /* ------------------------------------------------------------
  *  Load item_list.csv  (tolerant header lookup)
  * ------------------------------------------------------------ */
-import { parse } from 'csv-parse/sync';
 
 const want = {
   code:        ['maincode'],
