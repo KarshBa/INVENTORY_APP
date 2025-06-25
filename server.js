@@ -64,8 +64,8 @@ try {
     if (!subRaw || !list) return;          // skip incomplete lines
 
     /* key is *first two* digits, zero-padded, to match item_list */
-    const key = String(subRaw).trim().slice(0, 2).padStart(2, '0');
-    SUB_TO_LIST.set(key, String(list).trim().toUpperCase());
+    const key = String(subRaw).trim();              // ← no slicing/padding
+if (key) SUB_TO_LIST.set(key, String(list).trim().toUpperCase());
   });
 
   console.log(`[Shrink-App] loaded ${SUB_TO_LIST.size} sub-dept mappings`);
@@ -75,7 +75,7 @@ try {
 
 /* helper: turn a sub-dept into a list name (default OTHER) */
 const deriveList = sub =>
-  SUB_TO_LIST.get(String(sub).padStart(2,'0').slice(0,2)) || 'OTHER';
+  SUB_TO_LIST.get(String(sub).trim()) || 'OTHER';
 
 /* ------------------------------------------------------------
  *  Load item_list.csv  (tolerant header lookup)
