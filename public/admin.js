@@ -52,11 +52,16 @@ async function loadData () {
   tbody.innerHTML = '';
   data.slice().reverse().forEach(r => {
     const tr = document.createElement('tr');
-    tr.innerHTML =
-      `<td>${new Date(r.timestamp).toLocaleString()}</td>
-       <td>${r.itemCode}</td><td>${r.brand||''}</td>
-       <td>${r.description||''}</td><td>${r.quantity}</td>
-       <td>${r.price??''}</td>`;
+    tr.innerHTML = `
+  <td>${new Date(r.timestamp).toLocaleString()}</td>
+  <td class="code">${r.itemCode}</td>
+  <td class="brand">${r.brand || ''}</td>
+  <td class="description">${r.description || ''}</td>
+  <td>${r.quantity}</td>
+  <td>${r.price ?? ''}</td>
+  <td class="del-col">
+      <button class="del" data-id="${r.id}">🗑️</button>
+  </td>`;
     tbody.appendChild(tr);
   });
   if (data.length===0) tbody.innerHTML =
