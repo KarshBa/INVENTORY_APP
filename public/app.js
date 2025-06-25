@@ -29,7 +29,7 @@ codeForm.addEventListener('submit',  async e => {
   /* 1️⃣ ask the server for a match in item_list.csv */
   let hit = null;
   try {
-     const r = await fetch('/api/item/'  encodeURIComponent(currentItemCode));
+     const r = await fetch('/api/item/' + encodeURIComponent(currentItemCode));
     if (r.ok) hit = await r.json();         // {} if not found
   } catch { /* network error – just continue */ }
 
@@ -58,7 +58,7 @@ detailForm.addEventListener('submit',async e=>{
     price:document.getElementById('price').value===''?null:parseFloat(document.getElementById('price').value)
   };
   const listName=listSelect.value;
-  const res=await fetch('/api/shrink/'encodeURIComponent(listName),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  const res = await fetch('/api/shrink/' + encodeURIComponent(listName), {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
   if(res.ok){
     successMsg.textContent=`Shrink recorded to "${listName}" successfully!`;
     successMsg.classList.remove('hidden');
