@@ -26,29 +26,56 @@ let DEPARTMENTS = fs.existsSync(DEPT_PATH)
 fs.mkdirSync(path.dirname(DEPT_PATH), { recursive: true });
 fs.writeFileSync(DEPT_PATH, JSON.stringify(DEPARTMENTS, null, 2));
 
-// ────────────────────────────────────────────────────────────────
-// 1.  Load the master -item list once and keep it in memory
-// ────────────────────────────────────────────────────────────────
+/* ------------------------------------------------------------
+ *  Load item_list.csv  (tolerant header lookup)
+ * ------------------------------------------------------------ */
 import { parse } from 'csv-parse/sync';
+
+const want = {                 // canonical → possible header texts
+  code:        ['main code'],
+  brand:       ['main item-brand'],
+  description: ['main item-description'],
+  price:       ['price-regular-price'],
+  subdept:     ['sub-department-number']
+};
+
+// helper: case/space-insensitive header pick
+const pick = (row, aliases) => {
+  const keys = Object.keys(row);
+  for (const alias of aliases) {
+    const k = keys.find(h =>
+      h.replace(/\s+/g, '').toLowerCase() ===
+      alias.replace(/\s+/g, '').toLowerCase()
+    );
+    if (k) return row[k];
+  }
+  return undefined;
+};
+
 const masterItems = new Map();
+
 try {
-  const csv  = fs.readFileSync(path.join(__dirname,'item_list.csv'),'utf8');
-  const rows = parse(csv,{columns:true,skip_empty_lines:true});
+  const csv  = fs.readFileSync(path.join(__dirname, 'item_list.csv'), 'utf8');
+  const rows = parse(csv, { columns: true, skip_empty_lines: true });
+
   rows.forEach(r => {
-    const code = String(r['main code'] || '')
-                   .replace(/\D/g,'')       // digits only
-                   .padStart(13,'0');       // 13-digit catalogue code
-    if (!code) return;
-    masterItems.set(code,{
+    const rawCode = pick(r, want.code) || '';
+    const code = String(rawCode).replace(/\D/g, '').padStart(13, '0');
+    if (!code) return;          // skip rows without a usable code
+
+    masterItems.set(code, {
       code,
-      brand:       r['main item-brand']       || '',
-      description: r['main item-description'] || '',
-      price:       parseFloat(r['price-regular-price']||0) || '',
-      subdept:     r['sub-department-number'] || ''
+      brand:       pick(r, want.brand)       || '',
+      description: pick(r, want.description) || '',
+      price:       parseFloat(pick(r, want.price) || 0) || '',
+      subdept:     pick(r, want.subdept)     || ''
     });
   });
+
   console.log(`[Shrink-App] loaded ${masterItems.size} items`);
-} catch { console.warn('[Shrink-App] item_list.csv missing – look-ups disabled'); }
+} catch (err) {
+  console.warn('[Shrink-App] item_list.csv unreadable → look-ups disabled', err);
+}
 
 // Initialise store
 if (!fs.existsSync(DATA_PATH)) {
