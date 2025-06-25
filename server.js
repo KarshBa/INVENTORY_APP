@@ -184,29 +184,42 @@ app.use((req, res, next) => {
 });
 app.use(express.static(path.join(__dirname, 'public')));
 
+/* ─── single item lookup ────────────────────────────────────────── */
 app.get('/api/item/:code', (req, res) => {
-  const raw = canon(req.params.code);     // digits → 13-char string
+  /* rawDigits  = exactly what the scanner sent (only 0-9)          */
+  /* canonCode  = 13-digit catalogue format we use as primary key   */
+  const rawDigits = String(req.params.code || '').replace(/\D/g, '');
+  const canonCode = canon(rawDigits);          // always 13 chars
 
-  /* 1️⃣ direct catalogue code ------------------------------------ */
-  let hit = masterItems.get(raw);
+  /* 1️⃣ ordinary catalogue lookup -------------------------------- */
+  let hit = masterItems.get(canonCode);
 
-  /* 2️⃣ scale label? try 7-digit, then 6-digit variant ----------- */
-  if (!hit) {
-    const body = raw.slice(-12);          // 12-digit payload only
-    if (raw[0] === '2') {                 // starts with “2”, so it *is* a scale label
-      const code7 = canon('00' + body.slice(0, 7) + '0000'); // current logic
-      const code6 = canon('00' + body.slice(0, 6) + '0000'); // PLU-only fallback
-      const price = (+body.slice(7, 11) / 100).toFixed(2);   // same calculation
+  /* 2️⃣ scale label (12-digit, starts with “2”) ------------------ */
+  if (!hit && rawDigits.length === 12 && rawDigits[0] === '2') {
 
-      hit = masterItems.get(code7) || masterItems.get(code6);
-      if (hit) {
-        hit = { ...hit, price, code: hit.code };             // merge price
-      }
+    const body   = rawDigits.slice(0, -1);     // drop check digit
+    const price  = (parseInt(body.slice(7, 11), 10) / 100).toFixed(2);
+
+    /* first try the 7-digit catalogue code …0027088050000 */
+    const code7  = canon('00' + body.slice(0, 7) + '0000');
+
+    /* …then fall back to 6-digit (PLU only) …002708800000 */
+    const code6  = canon('00' + body.slice(0, 6) + '0000');
+
+    hit = masterItems.get(code7) || masterItems.get(code6);
+
+    if (hit) {
+      /* merge decoded price but keep full item data */
+      hit = { ...hit, price };
+    } else {
+      /* no catalogue match at all – at least give the price back   */
+      hit = { price, code: code7 };
     }
   }
 
-  res.json(hit || {});                // {} == not found
+  res.json(hit || {});                          // {} → “not found”
 });
+
 // ---- Routes ----
 
 // ─── CSV for ALL lists *with total* ───────────────────────────────
