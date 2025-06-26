@@ -38,6 +38,39 @@ async function syncItemList () {
   }
 }
 
+/* load or reload the local copy of item_list.csv */
+const masterItems = new Map();
+function loadMasterItems () {
+  masterItems.clear();
+  try {
+    const csv  = fs.readFileSync(ITEM_LIST_PATH, 'utf8');   // <-- use synced file
+    const rows = parse(csv, { columns: true, skip_empty_lines: true });
+
+    rows.forEach(r => {
+      const code = canon(pick(r, want.code));
+      if (!code || code === '0000000000000') return;        // skip blanks
+
+      const subdept = pick(r, want.subdept) || '';
+
+      masterItems.set(code, {
+        code,
+        brand      : pick(r, want.brand)       || '',
+        description: pick(r, want.description) || '',
+        price      : parseFloat(pick(r, want.price) || 0) || '',
+        subdept,
+        list       : deriveList(subdept)
+      });
+    });
+
+    console.log(`[Shrink-App] loaded ${masterItems.size} items`);
+  } catch (err) {
+    console.warn('[Shrink-App] item_list.csv unreadable → look-ups disabled', err);
+  }
+}
+
+/* first load using whatever file is already on disk */
+loadMasterItems();
+
 // 1️⃣ pull on boot, THEN parse
 await syncItemList();
 loadMasterItems();
@@ -133,39 +166,6 @@ const pick = (row, aliases) => {
   const hit  = Object.keys(row).find(k => want.includes(norm(k)));
   return hit ? row[hit] : undefined;
 };
-
-/* load or reload the local copy of item_list.csv */
-const masterItems = new Map();
-function loadMasterItems () {
-  masterItems.clear();
-  try {
-    const csv  = fs.readFileSync(ITEM_LIST_PATH, 'utf8');   // <-- use synced file
-    const rows = parse(csv, { columns: true, skip_empty_lines: true });
-
-    rows.forEach(r => {
-      const code = canon(pick(r, want.code));
-      if (!code || code === '0000000000000') return;        // skip blanks
-
-      const subdept = pick(r, want.subdept) || '';
-
-      masterItems.set(code, {
-        code,
-        brand      : pick(r, want.brand)       || '',
-        description: pick(r, want.description) || '',
-        price      : parseFloat(pick(r, want.price) || 0) || '',
-        subdept,
-        list       : deriveList(subdept)
-      });
-    });
-
-    console.log(`[Shrink-App] loaded ${masterItems.size} items`);
-  } catch (err) {
-    console.warn('[Shrink-App] item_list.csv unreadable → look-ups disabled', err);
-  }
-}
-
-/* first load using whatever file is already on disk */
-loadMasterItems();
 
 // Initialise store
 if (!fs.existsSync(DATA_PATH)) {
