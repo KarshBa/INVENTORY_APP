@@ -133,11 +133,8 @@ const pick = (row, aliases) => {
   return hit ? row[hit] : undefined;
 };
 
-const masterItems = new Map();
-
-const masterItems = new Map();
-
 /* load or reload the local copy of item_list.csv */
+const masterItems = new Map();
 function loadMasterItems () {
   masterItems.clear();
   try {
