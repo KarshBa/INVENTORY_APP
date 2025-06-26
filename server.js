@@ -18,6 +18,13 @@ console.log('[Shrink-App] DATA_DIR →', DATA_DIR);
 fs.mkdirSync(DATA_DIR, { recursive: true });
 const DATA_PATH = path.join(DATA_DIR, 'shrink_records.json');
 
+// digits-only  → strip UPC check-digit → pad to 13
+const normCode = raw => {
+  const d = String(raw||'').replace(/\D/g,'');
+  if (d.length === 12) return d.slice(0,11).padStart(13,'0');
+  return d.padStart(13,'0');
+};
+
 /* ---------- sync item_list.csv from master ---------- */
 const ITEM_LIST_URL  = process.env.ITEM_LIST_URL  || '';
 const ITEM_LIST_PATH = process.env.ITEM_LIST_PATH || path.join(DATA_DIR, 'item_list.csv');
@@ -47,7 +54,7 @@ function loadMasterItems () {
     const rows = parse(csv, { columns: true, skip_empty_lines: true });
 
     rows.forEach(r => {
-      const code = canon(pick(r, want.code));
+      const code = normCode(pick(r, want.code));
       if (!code || code === '0000000000000') return;        // skip blanks
 
       const subdept = pick(r, want.subdept) || '';
@@ -81,25 +88,6 @@ app.post('/api/sync-items', async (_req, res) => {
   if (ok) loadMasterItems();
   res.json({ success: ok });
 });
-
-// Departments
-const DEPT_PATH = path.join(__dirname, 'public', 'departments.json');
-let DEPARTMENTS = fs.existsSync(DEPT_PATH)
-  ? JSON.parse(fs.readFileSync(DEPT_PATH, 'utf-8'))
-  : ['GENERAL'];
-fs.mkdirSync(path.dirname(DEPT_PATH), { recursive: true });
-fs.writeFileSync(DEPT_PATH, JSON.stringify(DEPARTMENTS, null, 2));
-
-/* ------------------------------------------------------------------
- * Canonicalise any “code” so it is ALWAYS 13 digits (UPC-A style):
- *   – keep only 0-9
- *   – pad OR slice so the result is exactly 13 chars
- * ------------------------------------------------------------------*/
-const canon = s => {
-  const digits = String(s || '').replace(/\D/g, '');
-  return digits.padStart(13, '0').slice(-13);
-};
-
 /* ------------------------------------------------------------------
  *  Load DEPARTMENTS.csv   (maps sub-dept → top-level list/department)
  *  File format:
@@ -108,6 +96,13 @@ const canon = s => {
  *  (No header row)
  * ------------------------------------------------------------------*/
 import { parse } from 'csv-parse/sync';
+// Departments
+const DEPT_PATH = path.join(__dirname, 'public', 'departments.json');
+let DEPARTMENTS = fs.existsSync(DEPT_PATH)
+  ? JSON.parse(fs.readFileSync(DEPT_PATH, 'utf-8'))
+  : ['GENERAL'];
+fs.mkdirSync(path.dirname(DEPT_PATH), { recursive: true });
+fs.writeFileSync(DEPT_PATH, JSON.stringify(DEPARTMENTS, null, 2));
 
 const SUB_TO_LIST = new Map();            // "40" → "PACKAGE GROCERY"
 
@@ -154,16 +149,16 @@ const want = {
   subdept:     ['subdepartmentnumber']
 };
 
-// helper: strip BOM, lower-case, keep only letters & digits
-const norm = h => h
+// helper for CSV **header names only**
+const cleanHdr = h =>
   .replace(/^\uFEFF/, '')         // remove UTF-8 BOM if present
   .toLowerCase()
   .replace(/[^a-z0-9]/g, '');     // drop everything but a-z & 0-9
 
 // tolerant header lookup
 const pick = (row, aliases) => {
-  const want = aliases.map(norm);
-  const hit  = Object.keys(row).find(k => want.includes(norm(k)));
+  const want = aliases.map(cleanHdr);
+  const hit  = Object.keys(row).find(k => want.includes(cleanHdr(k)));
   return hit ? row[hit] : undefined;
 };
 
@@ -187,6 +182,14 @@ const fmtLocal = iso =>
     timeStyle: 'medium'
   });
 
+// digits-only  →  strip UPC-A check-digit (if present) →  left-pad to 13
+const normCode = s => {
+  const d = String(s || '').replace(/\D/g,'');
+  if (d.length === 12) return d.slice(0,11).padStart(13,'0'); // UPC-A + check
+  if (d.length === 11) return d.padStart(13,'0');             // UPC-A no check
+  return d.padStart(13,'0');                                  // EAN-13, PLU …
+};
+
 /* ── variable-weight (scale-label) decoder ────────────────────────────
  *  UPC-A 12-digit label that starts with “2”.
  *  Format: 2 + 5-digit PLU + 5-digit price/weight + check-digit
@@ -206,7 +209,7 @@ const decodeScale = upc => {
   if (!/^[0-9]{12}$/.test(upc) || upc[0] !== '2') return null;
 
   const body      = upc.slice(0, -1);          // drop check digit
-  const catCode    = canon('00' + body.slice(0, 7) + '0000');
+  const catCode = normCode('00' + body.slice(0,7) + '0000');
   const priceCents= parseInt(body.slice(7, 11), 10);           // last-4 digits
   return { catCode, price: (priceCents / 100).toFixed(2) };
 };
@@ -241,11 +244,9 @@ app.use(express.static(path.join(__dirname, 'public')));
  * ------------------------------------------------------------ */
 
 app.get('/api/item/:code', (req, res) => {
-  const rawDigits = String(req.params.code || '').replace(/\D/g, '');
-  const canonCode = canon(rawDigits);              // ordinary catalogue#
-
-  /* 1️⃣ regular catalogue number ---------------------------------- */
-  let hit = masterItems.get(canonCode);
+  const rawDigits = String(req.params.code || '').replace(/\D/g,'');
+  const code13    = normCode(rawDigits);
+  let hit         = masterItems.get(code13);
 
   /* 2️⃣ variable-weight (scale) label ------------------------------ */
   if (!hit && rawDigits.length === 12 && rawDigits[0] === '2') {
@@ -318,7 +319,8 @@ app.post('/api/shrink/:list', (req, res) => {
   const key = slug(req.params.list);
   const store = readJSON(DATA_PATH);
   if (!store[key]) store[key] = [];
-  const { itemCode, brand, description, quantity, price } = req.body;
+  let { itemCode, brand, description, quantity, price } = req.body;
+  itemCode = normCode(itemCode);
   if (!itemCode || quantity === undefined) {
     return res.status(400).json({ error: 'itemCode and quantity required' });
   }
