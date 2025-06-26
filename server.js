@@ -38,10 +38,11 @@ async function syncItemList () {
   }
 }
 
-// pull once on boot (non-blocking)
-syncItemList().finally(loadMasterItems);   // <-- see next diff
+// 1️⃣ pull on boot, THEN parse
+await syncItemList();
+loadMasterItems();
 
-// manual trigger if you ever need it
+// 2️⃣ manual refresh endpoint
 app.post('/api/sync-items', async (_req, res) => {
   const ok = await syncItemList();
   if (ok) loadMasterItems();
