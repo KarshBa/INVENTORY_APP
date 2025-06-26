@@ -92,6 +92,14 @@ const pick = (row, aliases) => {
   return hit ? row[hit] : undefined;
 };
 
+// digits-only  →  strip UPC-A check-digit (if present) →  left-pad to 13
+const normCode = s => {
+  const d = String(s || '').replace(/\D/g,'');
+  if (d.length === 12) return d.slice(0,11).padStart(13,'0'); // UPC-A + check
+  if (d.length === 11) return d.padStart(13,'0');             // UPC-A no check
+  return d.padStart(13,'0');                                  // EAN-13, PLU …
+};
+
 const masterItems = new Map();
 
 try {
@@ -140,14 +148,6 @@ const fmtLocal = iso =>
     dateStyle: 'short',
     timeStyle: 'medium'
   });
-
-// digits-only  →  strip UPC-A check-digit (if present) →  left-pad to 13
-const normCode = s => {
-  const d = String(s || '').replace(/\D/g,'');
-  if (d.length === 12) return d.slice(0,11).padStart(13,'0'); // UPC-A + check
-  if (d.length === 11) return d.padStart(13,'0');             // UPC-A no check
-  return d.padStart(13,'0');                                  // EAN-13, PLU …
-};
 
 /* ── variable-weight (scale-label) decoder ────────────────────────────
  *  UPC-A 12-digit label that starts with “2”.
