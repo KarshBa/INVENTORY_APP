@@ -18,6 +18,36 @@ console.log('[Shrink-App] DATA_DIR →', DATA_DIR);
 fs.mkdirSync(DATA_DIR, { recursive: true });
 const DATA_PATH = path.join(DATA_DIR, 'shrink_records.json');
 
+/* ---------- sync item_list.csv from master ---------- */
+const ITEM_LIST_URL  = process.env.ITEM_LIST_URL  || '';
+const ITEM_LIST_PATH = process.env.ITEM_LIST_PATH || path.join(DATA_DIR, 'item_list.csv');
+
+async function syncItemList () {
+  if (!ITEM_LIST_URL) return false;
+  try {
+    console.log('[Shrink-App] Fetching item list…');
+    const res = await fetch(ITEM_LIST_URL, { cache: 'no-store', timeout: 30_000 });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const text = await res.text();
+    fs.writeFileSync(ITEM_LIST_PATH, text);
+    console.log('[Shrink-App] Saved item list →', ITEM_LIST_PATH, `(${text.length} bytes)`);
+    return true;
+  } catch (err) {
+    console.error('[Shrink-App] Item list sync failed:', err.message);
+    return false;
+  }
+}
+
+// pull once on boot (non-blocking)
+syncItemList().finally(loadMasterItems);   // <-- see next diff
+
+// manual trigger if you ever need it
+app.post('/api/sync-items', async (_req, res) => {
+  const ok = await syncItemList();
+  if (ok) loadMasterItems();
+  res.json({ success: ok });
+});
+
 // Departments
 const DEPT_PATH = path.join(__dirname, 'public', 'departments.json');
 let DEPARTMENTS = fs.existsSync(DEPT_PATH)
@@ -79,6 +109,7 @@ const deriveList = sub =>
 
 /* ------------------------------------------------------------
  *  Load item_list.csv  (tolerant header lookup)
+ *  Called once on boot and again after /api/sync-items
  * ------------------------------------------------------------ */
 
 const want = {
@@ -104,32 +135,39 @@ const pick = (row, aliases) => {
 
 const masterItems = new Map();
 
-try {
-  const csv  = fs.readFileSync(path.join(__dirname, 'item_list.csv'), 'utf8');
-  const rows = parse(csv, { columns: true, skip_empty_lines: true });
+const masterItems = new Map();
 
-rows.forEach(r => {
-  const code = canon(pick(r, want.code));
+/* load or reload the local copy of item_list.csv */
+function loadMasterItems () {
+  masterItems.clear();
+  try {
+    const csv  = fs.readFileSync(ITEM_LIST_PATH, 'utf8');   // <-- use synced file
+    const rows = parse(csv, { columns: true, skip_empty_lines: true });
 
-  // 🔒 skip blank / invalid rows
-  if (!code || code === '0000000000000') return;
+    rows.forEach(r => {
+      const code = canon(pick(r, want.code));
+      if (!code || code === '0000000000000') return;        // skip blanks
 
-  const subdept = pick(r, want.subdept) || '';     // ← grab once
+      const subdept = pick(r, want.subdept) || '';
 
-  masterItems.set(code, {
-    code,
-    brand      : pick(r, want.brand)       || '',
-    description: pick(r, want.description) || '',
-    price      : parseFloat(pick(r, want.price) || 0) || '',
-    subdept,
-    list       : deriveList(subdept)          // ← **add this line**
-  });
-});
-  
-  console.log(`[Shrink-App] loaded ${masterItems.size} items`);
-} catch (err) {
-  console.warn('[Shrink-App] item_list.csv unreadable → look-ups disabled', err);
+      masterItems.set(code, {
+        code,
+        brand      : pick(r, want.brand)       || '',
+        description: pick(r, want.description) || '',
+        price      : parseFloat(pick(r, want.price) || 0) || '',
+        subdept,
+        list       : deriveList(subdept)
+      });
+    });
+
+    console.log(`[Shrink-App] loaded ${masterItems.size} items`);
+  } catch (err) {
+    console.warn('[Shrink-App] item_list.csv unreadable → look-ups disabled', err);
+  }
 }
+
+/* first load using whatever file is already on disk */
+loadMasterItems();
 
 // Initialise store
 if (!fs.existsSync(DATA_PATH)) {
