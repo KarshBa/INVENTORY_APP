@@ -206,7 +206,14 @@ app.get('/api/item/:code', (req, res) => {
   const rawDigits = String(req.params.code || '').replace(/\D/g,'');
   const code13    = normCode(rawDigits);
   let hit         = masterItems.get(code13);
-  /* 2️⃣ variable-weight (scale) label ------------------------------ */
+
+  /* ➋ fallback: try the “old” 12-digit key (keeps check-digit) */
+  if (!hit) {
+     const legacy = ('0000000000000' + rawDigits).slice(-13);  // old canon()
+     hit = masterItems.get(legacy);
+  }
+
+  /* 2️⃣ variable-weight (scale) label -------------------- */
   if (!hit && rawDigits.length === 12 && rawDigits[0] === '2') {
 
     const body   = rawDigits.slice(0, -1);          // minus check-digit
