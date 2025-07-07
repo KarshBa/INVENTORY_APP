@@ -302,11 +302,14 @@ app.get('/api/item/:code', (req, res) => {
 });
 
 // ---- Routes ----
-
-// Front-end “Refresh Items” button POSTs here
-app.post('/api/sync-items', async (_req, res) => {
-  await pingDownstreams();          // fire-and-forget
-  res.json({ success: true });
+app.post('/api/refresh-items', async (_req, res) => {
+  try {
+    await refreshItemList();   // the helper you already have
+    res.sendStatus(204);       // 204 No Content
+  } catch (err) {
+    console.error('[Refresh] failed', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ─── CSV for ALL lists *with total* ───────────────────────────────
