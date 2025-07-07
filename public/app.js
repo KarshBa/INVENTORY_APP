@@ -51,6 +51,12 @@ codeForm.addEventListener('submit',  async e => {
 
 detailForm.addEventListener('submit',async e=>{
   e.preventDefault();
+   const priceField = document.getElementById('price');
+ if (priceField.value.trim() === '') {
+   alert('Please enter a price before submitting.');
+   priceField.focus();
+   return;        // ⬅️ stop the submit handler
+ }
   const payload={
     itemCode:currentItemCode,
     brand:document.getElementById('brand').value.trim(),
