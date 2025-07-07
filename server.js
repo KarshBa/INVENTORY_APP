@@ -97,7 +97,6 @@ const pick = (row, aliases) => {
 };
 
 /* ---------- remote item_list.csv auto-refresh ------------------------ */
-const masterItems = new Map();
 const ITEM_CSV_URL = process.env.ITEM_CSV_URL;     // e.g. https://.../item_list.csv
 let   refreshTimer = null;                         // guard against hot-reload dupes
 
@@ -140,7 +139,7 @@ async function refreshItemList(){
     console.warn('[Auto-refresh] failed – keeping existing list:', err.message);
   }
 }
-
+const masterItems = new Map();
 /* first run now, then every 60 min */
 if(!refreshTimer){
   refreshItemList();
