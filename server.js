@@ -5,6 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto';
 import basicAuth from 'express-basic-auth';
+import fetch from 'node-fetch';
 
 const adminAuth = basicAuth({
   users    : { [process.env.ADMIN_USER || 'admin']
@@ -24,6 +25,7 @@ const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 console.log('[Shrink-App] DATA_DIR →', DATA_DIR);
 fs.mkdirSync(DATA_DIR, { recursive: true });
 const DATA_PATH = path.join(DATA_DIR, 'shrink_records.json');
+const ITEM_CSV_PATH = path.join(__dirname, 'item_list.csv');
 
 // Departments
 const DEPT_PATH = path.join(__dirname, 'public', 'departments.json');
@@ -74,11 +76,8 @@ if (key) SUB_TO_LIST.set(key, String(list).trim().toUpperCase());
 const deriveList = sub =>
   SUB_TO_LIST.get(String(sub).trim()) || 'OTHER';
 
-/* ------------------------------------------------------------
- *  Load item_list.csv  (tolerant header lookup)
- * ------------------------------------------------------------ */
-
-const want = {
+/* ────── ✦ ADD: tolerant CSV header lookup (wanted / cleanHdr / pick) ────── */
+const wanted = {
   code:        ['maincode'],
   brand:       ['mainitembrand'],
   description: ['mainitemdescription'],
@@ -86,6 +85,20 @@ const want = {
   subdept:     ['subdepartmentnumber']
 };
 
+const cleanHdr = h => String(h)
+  .replace(/^\uFEFF/, '')     // strip BOM
+  .toLowerCase()
+  .replace(/[^a-z0-9]/g, ''); // keep a-z / 0-9 only
+
+const pick = (row, aliases) => {
+  const keys = aliases.map(cleanHdr);
+  const hit  = Object.keys(row).find(k => keys.includes(cleanHdr(k)));
+  return hit ? row[hit] : undefined;
+};
+
+/* ------------------------------------------------------------
+ *  Load item_list.csv  (tolerant header lookup)
+ * ------------------------------------------------------------ */
 // helper for CSV **header names only**
 const cleanHdr = h => String(h)
   .replace(/^\uFEFF/, '')         // remove UTF-8 BOM if present
