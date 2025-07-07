@@ -96,31 +96,56 @@ const pick = (row, aliases) => {
   return hit ? row[hit] : undefined;
 };
 
-/* ------------------------------------------------------------
- *  Load item_list.csv  (tolerant header lookup)
- * ------------------------------------------------------------ */
-// helper for CSV **header names only**
-const cleanHdr = h => String(h)
-  .replace(/^\uFEFF/, '')         // remove UTF-8 BOM if present
-  .toLowerCase()
-  .replace(/[^a-z0-9]/g, '');     // drop everything but a-z & 0-9
-
-// tolerant header lookup
-const pick = (row, aliases) => {
-  const want = aliases.map(cleanHdr);
-  const hit  = Object.keys(row).find(k => want.includes(cleanHdr(k)));
-  return hit ? row[hit] : undefined;
-};
-
-// digits-only  →  strip UPC-A check-digit (if present) →  left-pad to 13
-const normCode = s => {
-  const d = String(s || '').replace(/\D/g,'');
-  if (d.length === 12) return d.slice(0,11).padStart(13,'0'); // UPC-A + check
-  if (d.length === 11) return d.padStart(13,'0');             // UPC-A no check
-  return d.padStart(13,'0');                                  // EAN-13, PLU …
-};
-
+/* ---------- remote item_list.csv auto-refresh ------------------------ */
 const masterItems = new Map();
+const ITEM_CSV_URL = process.env.ITEM_CSV_URL;     // e.g. https://.../item_list.csv
+let   refreshTimer = null;                         // guard against hot-reload dupes
+
+function parseMasterCSV(csvText){
+  const rows = parse(csvText,{ columns:true, skip_empty_lines:true });
+  const map  = new Map();
+  rows.forEach(r=>{
+    const code = normCode(pick(r, wanted.code));
+    if(!code) return;
+    map.set(code,{
+      code,
+      brand      : pick(r, wanted.brand)       || '',
+      description: pick(r, wanted.description) || '',
+      price      : parseFloat(pick(r, wanted.price)||0) || '',
+      subdept    : pick(r, wanted.subdept)     || '',
+      list       : deriveList(pick(r, wanted.subdept)||'')
+    });
+  });
+  return map;
+}
+
+async function refreshItemList(){
+  if(!ITEM_CSV_URL) return;                    // nothing configured
+  try{
+    const res = await fetch(ITEM_CSV_URL, { timeout: 15_000 });
+    if(!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+    const csvText = await res.text();
+
+    /* 1️⃣ replace file atomically */
+    fs.writeFileSync(`${ITEM_CSV_PATH}.tmp`, csvText);
+    fs.renameSync(`${ITEM_CSV_PATH}.tmp`, ITEM_CSV_PATH);
+
+    /* 2️⃣ rebuild in-memory map */
+    masterItems.clear();
+    parseMasterCSV(csvText).forEach((v,k)=>masterItems.set(k,v));
+
+    console.log(`[Auto-refresh] downloaded ${masterItems.size.toLocaleString()} items @`,
+                new Date().toISOString());
+  }catch(err){
+    console.warn('[Auto-refresh] failed – keeping existing list:', err.message);
+  }
+}
+
+/* first run now, then every 60 min */
+if(!refreshTimer){
+  refreshItemList();
+  refreshTimer = setInterval(refreshItemList, 60*60*1000);
+}
 
 try {
   const csv  = fs.readFileSync(path.join(__dirname, 'item_list.csv'), 'utf8');
@@ -145,9 +170,12 @@ rows.forEach(r => {
 });
   
   console.log(`[Shrink-App] loaded ${masterItems.size} items`);
+  console.log('[Startup] local item_list.csv mtime →',
+            fs.statSync(ITEM_CSV_PATH).mtime);
 } catch (err) {
   console.warn('[Shrink-App] item_list.csv unreadable → look-ups disabled', err);
 }
+
 
 // Initialise store
 if (!fs.existsSync(DATA_PATH)) {
