@@ -304,8 +304,8 @@ app.get('/api/item/:code', (req, res) => {
 // ---- Routes ----
 app.post('/api/refresh-items', async (_req, res) => {
   try {
-    await refreshItemList();   // the helper you already have
-    res.sendStatus(204);       // 204 No Content
+    await refreshItemList();        // ← your existing helper
+    res.sendStatus(204);            // 204 No Content = success
   } catch (err) {
     console.error('[Refresh] failed', err);
     res.status(500).json({ error: err.message });
