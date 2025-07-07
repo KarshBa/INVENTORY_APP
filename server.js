@@ -159,18 +159,18 @@ try {
   const rows = parse(csv, { columns: true, skip_empty_lines: true });
 
 rows.forEach(r => {
-  const code = normCode(pick(r, want.code));
+  const code = normCode(pick(r, wanted.code));
 
   // 🔒 skip blank / invalid rows
   if (!code || code === '0000000000000') return;
 
-  const subdept = pick(r, want.subdept) || '';     // ← grab once
+  const subdept = pick(r, wanted.subdept) || '';     // ← grab once
 
   masterItems.set(code, {
     code,
-    brand      : pick(r, want.brand)       || '',
-    description: pick(r, want.description) || '',
-    price      : parseFloat(pick(r, want.price) || 0) || '',
+    brand      : pick(r, wanted.brand)       || '',
+    description: pick(r, wanted.description) || '',
+    price      : parseFloat(pick(r, wanted.price) || 0) || '',
     subdept,
     list       : deriveList(subdept)          // ← **add this line**
   });
@@ -179,10 +179,15 @@ rows.forEach(r => {
   console.log(`[Shrink-App] loaded ${masterItems.size} items`);
   console.log('[Startup] local item_list.csv mtime →',
             fs.statSync(ITEM_CSV_PATH).mtime);
-} catch (err) {
-  console.warn('[Shrink-App] item_list.csv unreadable → look-ups disabled', err);
-}
+//Commenting this out in case we don't want render to kill the container after all.
+//} catch (err) {
+  //console.warn('[Shrink-App] item_list.csv unreadable → look-ups disabled', err);
+//} 
 
+} catch (err) {
+  console.error('[Startup] Failed to load item_list.csv:', err);
+  process.exit(1);      // kill the container so Render restarts it
+}
 
 // Initialise store
 if (!fs.existsSync(DATA_PATH)) {
