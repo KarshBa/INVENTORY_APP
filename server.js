@@ -303,6 +303,12 @@ app.get('/api/item/:code', (req, res) => {
 
 // ---- Routes ----
 
+// Front-end “Refresh Items” button POSTs here
+app.post('/api/sync-items', async (_req, res) => {
+  await pingDownstreams();          // fire-and-forget
+  res.json({ success: true });
+});
+
 // ─── CSV for ALL lists *with total* ───────────────────────────────
 app.get('/api/shrink/export-all', (req, res) => {
   const { from, to } = req.query;
