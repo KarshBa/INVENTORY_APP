@@ -17,6 +17,7 @@ fetch('/api/departments').then(r=>r.json()).then(lists=>{
     opt.value=l; opt.textContent=l;
     listSelect.appendChild(opt);
   });
+  if (lists.includes('OTHER')) listSelect.value = 'OTHER';
 });
 
 // ── code-form submit ─────────────────────────────────────────────
