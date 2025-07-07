@@ -85,6 +85,14 @@ const wanted = {
   subdept:     ['subdepartmentnumber']
 };
 
+// ---------- canonicalise barcodes to 13-digit catalogue codes ----------
+const normCode = s => {
+  const d = String(s || '').replace(/\D/g, '');
+  if (d.length === 12) return d.slice(0, 11).padStart(13, '0'); // UPC-A with check
+  if (d.length === 11) return d.padStart(13, '0');              // UPC-A no check
+  return d.padStart(13, '0');                                    // EAN-13 / PLU / other
+};
+
 const cleanHdr = h => String(h)
   .replace(/^\uFEFF/, '')     // strip BOM
   .toLowerCase()
