@@ -4,6 +4,13 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto';
+import basicAuth from 'express-basic-auth';
+
+const adminAuth = basicAuth({
+  users    : { [process.env.ADMIN_USER || 'admin']
+                 : process.env.ADMIN_PW   || 'changeme' },
+  challenge: true                 // browser pops the login dialog
+});
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
@@ -195,6 +202,10 @@ app.get('/__debug_favicon', (_req, res) => {
     if (err) console.error('Favicon test failed:', err);
   });
 });
+
+/* 🔒 protect ONLY admin UI & its APIs --------------- */
+app.use('/admin.html', adminAuth);
+app.use('/api/admin',  adminAuth);
 
 app.use(express.static(path.join(__dirname, 'public')));
 
