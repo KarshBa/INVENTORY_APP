@@ -126,7 +126,7 @@ function parseMasterCSV(csvText){
   return map;
 }
 
-export async function refreshItemList () {
+export async function refreshItemList (source = 'auto') {   // 'auto' | 'manual'
   if(!ITEM_CSV_URL) return;                    // nothing configured
   try{
     const res = await fetch(ITEM_CSV_URL, { timeout: 15_000 });
@@ -141,10 +141,11 @@ export async function refreshItemList () {
     masterItems.clear();
     parseMasterCSV(csvText).forEach((v,k)=>masterItems.set(k,v));
 
-    console.log(`[Auto-refresh] downloaded ${masterItems.size.toLocaleString()} items @`,
+    const tag = source === 'manual' ? 'Manual-refresh' : 'Auto-refresh';
+    console.log(`[${tag}] downloaded ${masterItems.size.toLocaleString()} items @`,
                 new Date().toISOString());
   }catch(err){
-    console.warn('[Auto-refresh] failed – keeping existing list:', err.message);
+    console.warn(`[${tag}] failed – keeping existing list:`, err.message);
   }
 }
 const masterItems = new Map();
@@ -304,7 +305,7 @@ app.get('/api/item/:code', (req, res) => {
 // ---- Routes ----
 app.post('/api/refresh-items', async (_req, res) => {
   try {
-    await refreshItemList();        // ← your existing helper
+    await refreshItemList('manual');      // manual trigger
     res.sendStatus(204);            // 204 No Content = success
   } catch (err) {
     console.error('[Refresh] failed', err);
