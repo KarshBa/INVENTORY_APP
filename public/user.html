@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,6 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Inventory Shrink Tracker</title>
   <link rel="stylesheet" href="style.css" />
+  <style>
+    /* small inline patch to keep style cozy/simple */
+    .mode-row{
+      display:flex; gap:1rem; align-items:center; margin:.35rem 0 .75rem;
+      font-size:0.95rem;
+    }
+    .mode-row label{ display:flex; gap:.35rem; align-items:center; cursor:pointer; }
+    .mode-row input[type="radio"]{ transform: translateY(1px); }
+    .note{ font-size:.9rem; opacity:.8; margin-top:.25rem; }
+  </style>
 </head>
 <body>
   <div class="container">
@@ -18,31 +27,59 @@
 
     <form id="code-form" class="card">
       <label for="itemCode">Enter Item Code</label>
+
+      <!-- NEW: UPC vs PLU mode -->
+      <div class="mode-row" role="radiogroup" aria-label="Entry mode">
+        <label>
+          <input type="radio" name="entryMode" value="upc" checked>
+          UPC
+        </label>
+        <label>
+          <input type="radio" name="entryMode" value="plu">
+          Scale PLU
+        </label>
+      </div>
+
       <input type="text" id="itemCode" required />
+      <div class="note" id="mode-note"></div>
+
       <button type="submit">Next</button>
     </form>
 
     <form id="detail-form" class="card hidden">
-<div class="field">
-  <label for="subdept">Sub-Department</label>
-  <input type="text" id="subdept" readonly />
-</div>
-        <div class="field">
-  <label for="brand">Brand</label>
-  <input type="text" id="brand" />
-</div>
+      <div class="field">
+        <label for="subdept">Sub-Department</label>
+        <input type="text" id="subdept" readonly />
+      </div>
+
+      <div class="field">
+        <label for="brand">Brand</label>
+        <input type="text" id="brand" readonly />
+      </div>
+
       <div class="field">
         <label for="description">Description</label>
-        <input type="text" id="description" />
+        <input type="text" id="description" readonly />
       </div>
+
       <div class="field">
         <label for="quantity">Quantity Shrunk</label>
         <input type="number" step="0.01" id="quantity" required />
       </div>
+
       <div class="field">
         <label for="price">Price ($)</label>
-        <input type="number" step="0.01" id="price" />
+        <input type="number" step="0.01" id="price" readonly />
       </div>
+
+      <!-- NEW: Contribute checkbox -->
+      <div class="field">
+        <label style="display:flex;align-items:center;gap:.5rem;">
+          <input type="checkbox" id="contribute">
+          Contribute
+        </label>
+      </div>
+
       <button type="submit">Record Shrink</button>
     </form>
 
