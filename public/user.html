@@ -32,13 +32,15 @@
       <div class="mode-row" role="radiogroup" aria-label="Entry mode">
         <label>
           <input type="radio" name="entryMode" value="upc" checked>
-          UPC
+          <span class="mode-btn upc">UPC</span>
         </label>
+
         <label>
           <input type="radio" name="entryMode" value="plu">
-          Scale PLU
+          <span class="mode-btn plu">Scale PLU</span>
         </label>
       </div>
+
 
       <input type="text" id="itemCode" required />
       <div class="note" id="mode-note"></div>
@@ -73,12 +75,11 @@
       </div>
 
       <!-- NEW: Contribute checkbox -->
-      <div class="field">
-        <label style="display:flex;align-items:center;gap:.5rem;">
-          <input type="checkbox" id="contribute">
-          Contribute
-        </label>
+      <div class="field contribute-row">
+        <input type="checkbox" id="contribute" />
+        <label for="contribute" class="contribute-label">Contribute</label>
       </div>
+
 
       <button type="submit">Record Shrink</button>
     </form>
