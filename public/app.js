@@ -4,6 +4,106 @@ const detailForm=document.getElementById('detail-form');
 const successMsg=document.getElementById('success-msg');
 
 let currentItemCode='';
+
+/* ──────────────────────────────
+   📷 Barcode Scanning (native)
+   Uses BarcodeDetector if available.
+   Fallback = manual entry.
+────────────────────────────── */
+const openCameraBtn   = document.getElementById('openCameraBtn');
+const scannerModal    = document.getElementById('scannerModal');
+const scannerVideo    = document.getElementById('scannerVideo');
+const closeScannerBtn = document.getElementById('closeScannerBtn');
+const scannerStatus   = document.getElementById('scannerStatus');
+
+let scannerStream = null;
+let scanTimer = null;
+
+// normalize scanned code: keep digits; optionally strip UPC-A check digit
+function normalizeScannedCode(raw){
+  const digits = String(raw || '').replace(/\D/g,'');
+  if (digits.length === 12) {
+    // Treat as UPC-A and strip check digit → 11 digits
+    return digits.slice(0, 11);
+  }
+  return digits; // EAN-13 / PLU / others unchanged
+}
+
+async function openScanner(){
+  // Feature detect
+  if (!('BarcodeDetector' in window)) {
+    alert("Barcode scanning isn't supported on this browser. Please type the UPC.");
+    return;
+  }
+
+  try {
+    scannerStatus.textContent = 'Requesting camera…';
+    scannerModal.classList.remove('hidden');
+
+    scannerStream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: { ideal: 'environment' } // rear camera on phones
+      },
+      audio: false
+    });
+
+    scannerVideo.srcObject = scannerStream;
+
+    const detector = new BarcodeDetector({
+      formats: ['upc_a','upc_e','ean_13','ean_8','code_128','code_39']
+    });
+
+    // Polling loop (fast + simple)
+    scanTimer = setInterval(async () => {
+      if (!scannerVideo || scannerVideo.readyState < 2) return;
+
+      try {
+        const barcodes = await detector.detect(scannerVideo);
+        if (barcodes && barcodes.length) {
+          const raw = barcodes[0].rawValue || '';
+          const cleaned = normalizeScannedCode(raw);
+
+          if (cleaned) {
+            // Fill input and close scanner
+            document.getElementById('itemCode').value = cleaned;
+            stopScanner();
+
+            // Optional: auto-advance to detail form
+            codeForm.requestSubmit();
+          }
+        }
+      } catch (err) {
+        // ignore per-frame errors
+      }
+    }, 200);
+
+    scannerStatus.textContent = 'Point your camera at a barcode…';
+
+  } catch (err) {
+    stopScanner();
+    alert('Could not access camera. Please allow camera permissions and try again.');
+    console.error(err);
+  }
+}
+
+function stopScanner(){
+  if (scanTimer) { clearInterval(scanTimer); scanTimer = null; }
+  if (scannerStream) {
+    scannerStream.getTracks().forEach(t => t.stop());
+    scannerStream = null;
+  }
+  if (scannerVideo) scannerVideo.srcObject = null;
+  scannerModal.classList.add('hidden');
+}
+
+openCameraBtn?.addEventListener('click', openScanner);
+closeScannerBtn?.addEventListener('click', stopScanner);
+
+// Also close if user taps outside the card
+scannerModal?.addEventListener('click', (e) => {
+  if (e.target === scannerModal) stopScanner();
+});
+
 let currentPLU=null;
 let entryMode='upc';
 
