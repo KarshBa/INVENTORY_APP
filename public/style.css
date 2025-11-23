@@ -199,7 +199,7 @@ td.del-col{                 /* body cell – white & sticky           */
 
 /* Download CSV → green */
 #download {
-  background:#2e8b57;      /* soft green */
+  background:#28a745;      /* soft green */
   color:#fff;
   border:none;
 }
@@ -209,7 +209,7 @@ td.del-col{                 /* body cell – white & sticky           */
 
 /* Export ALL Lists → gray */
 #downloadAll {
-  background:#555;         /* medium gray */
+  background:#5f6368;         /* medium gray */
   color:#fff;
   border:none;
 }
