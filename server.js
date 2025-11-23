@@ -315,25 +315,31 @@ app.get('/api/item/:code', (req, res) => {
   }
 
   /* 2️⃣ variable-weight (scale) label -------------------- */
-  if (!hit && rawDigits.length === 12 && rawDigits[0] === '2') {
+if (
+  !hit &&
+  rawDigits[0] === '2' &&
+  (rawDigits.length === 12 || rawDigits.length === 11)
+) {
+  // If 12 digits, last is check digit; if 11 digits, it's already the body
+  const body = rawDigits.length === 12
+    ? rawDigits.slice(0, -1)
+    : rawDigits;
 
-    const body   = rawDigits.slice(0, -1);          // minus check-digit
-    const price  = (parseInt(body.slice(7, 11), 10) / 100).toFixed(2);
+  const price = (parseInt(body.slice(7, 11), 10) / 100).toFixed(2);
 
-    /* ---------- NEW helper makes sure the result is 13 digits ---- */
-    const catFromPLU = plu => ('00' + plu).padEnd(13, '0');
+  const catFromPLU = plu => ('00' + plu).padEnd(13, '0');
 
-    const code7 = catFromPLU(body.slice(0, 7));     // 7-digit variant
-    const code6 = catFromPLU(body.slice(0, 6));     // 6-digit variant
+  const code7 = catFromPLU(body.slice(0, 7));  // 2 + 5-digit PLU + 1st price digit
+  const code6 = catFromPLU(body.slice(0, 6));  // fallback variant
 
-    hit = masterItems.get(code7) || masterItems.get(code6);
+  hit = masterItems.get(code7) || masterItems.get(code6);
 
-    if (hit) {
-      hit = { ...hit, price };                      // merge price
-    } else {
-      hit = null;
-    }
+  if (hit) {
+    hit = { ...hit, price };   // merge decoded price
+  } else {
+    hit = null;               // still require validated master hit
   }
+}
 
   res.json(hit || {});                              // {} → “not found”
 });
