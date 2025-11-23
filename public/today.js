@@ -1,5 +1,4 @@
 const tbody = document.querySelector('#today-table tbody');
-const listSelect = document.getElementById('listSelect');
 const msg = document.getElementById('msg');
 
 function flash(text){
@@ -8,30 +7,20 @@ function flash(text){
   setTimeout(()=>msg.classList.add('hidden'), 1800);
 }
 
-async function populateLists(){
-  const res = await fetch('/api/departments');
-  const lists = await res.json();
-  lists.forEach(l=>{
-    const opt=document.createElement('option');
-    opt.value=l; opt.textContent=l;
-    listSelect.appendChild(opt);
-  });
-  if (lists.includes('OTHER')) listSelect.value = 'OTHER';
-  loadToday();
-}
-
 async function loadToday(){
-  const list = listSelect.value;
-  const res = await fetch(`/api/shrink/${encodeURIComponent(list)}/today`);
+  const res = await fetch('/api/shrink/today');
   const data = await res.json();
 
   tbody.innerHTML = '';
+
   data.slice().reverse().forEach(r=>{
     const tr = document.createElement('tr');
     tr.dataset.id = r.id;
+    tr.dataset.list = r.list; // <-- IMPORTANT for save/delete
 
     tr.innerHTML = `
       <td>${new Date(r.timestamp).toLocaleString()}</td>
+      <td>${r.list}</td>
       <td>${r.itemCode}</td>
       <td>${r.brand || ''}</td>
       <td>${r.description || ''}</td>
@@ -51,15 +40,17 @@ async function loadToday(){
   });
 
   if (data.length===0){
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">No entries today</td></tr>';
+    tbody.innerHTML =
+      '<tr><td colspan="9" style="text-align:center;">No entries today</td></tr>';
   }
 }
 
 tbody.addEventListener('click', async (ev)=>{
-  const tr = ev.target.closest('tr[data-id]');
+  const tr = ev.target.closest('tr[data-id][data-list]');
   if (!tr) return;
-  const id = tr.dataset.id;
-  const list = listSelect.value;
+
+  const id   = tr.dataset.id;
+  const list = tr.dataset.list;  // <-- per-row list
 
   if (ev.target.classList.contains('del')){
     if (!confirm('Delete this record?')) return;
@@ -104,5 +95,4 @@ tbody.addEventListener('click', async (ev)=>{
   }
 });
 
-listSelect.addEventListener('change', loadToday);
-populateLists();
+loadToday();
