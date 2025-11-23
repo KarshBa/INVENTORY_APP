@@ -85,7 +85,8 @@ const wanted = {
   brand:       ['mainitembrand'],
   description: ['mainitemdescription'],
   price:       ['priceregularprice'],
-  subdept:     ['subdepartmentnumber']
+  subdept:     ['subdepartmentnumber'],
+  plu:         ['posinformationplucode']
 };
 
 // ---------- canonicalise barcodes to 13-digit catalogue codes ----------
@@ -117,14 +118,18 @@ function parseMasterCSV(csvText){
   rows.forEach(r=>{
     const code = normCode(pick(r, wanted.code));
     if(!code) return;
-    map.set(code,{
-      code,
-      brand      : pick(r, wanted.brand)       || '',
-      description: pick(r, wanted.description) || '',
-      price      : parseFloat(pick(r, wanted.price)||0) || '',
-      subdept    : pick(r, wanted.subdept)     || '',
-      list       : deriveList(pick(r, wanted.subdept)||'')
-    });
+    const pluRaw = pick(r, wanted.plu);
+const plu = String(pluRaw || '').replace(/\D/g,'').trim() || null;
+map.set(code,{
+  code,
+  plu,
+  brand      : pick(r, wanted.brand)       || '',
+  description: pick(r, wanted.description) || '',
+  price      : parseFloat(pick(r, wanted.price)||0) || '',
+  subdept    : pick(r, wanted.subdept)     || '',
+  list       : deriveList(pick(r, wanted.subdept)||'')
+});
+if (plu) pluToItemCode.set(plu, code);
   });
   return map;
 }
@@ -152,6 +157,7 @@ export async function refreshItemList (source = 'auto') {   // 'auto' | 'manual'
   }
 }
 const masterItems = new Map();
+const pluToItemCode = new Map();
 /* first run now, then every 60 min */
 if(!refreshTimer){
   refreshItemList();
@@ -170,14 +176,20 @@ rows.forEach(r => {
 
   const subdept = pick(r, wanted.subdept) || '';     // ← grab once
 
-  masterItems.set(code, {
-    code,
-    brand      : pick(r, wanted.brand)       || '',
-    description: pick(r, wanted.description) || '',
-    price      : parseFloat(pick(r, wanted.price) || 0) || '',
-    subdept,
-    list       : deriveList(subdept)          // ← **add this line**
-  });
+  const pluRaw = pick(r, wanted.plu);
+const plu = String(pluRaw || '').replace(/\D/g,'').trim() || null;
+
+masterItems.set(code, {
+  code,
+  plu,
+  brand      : pick(r, wanted.brand)       || '',
+  description: pick(r, wanted.description) || '',
+  price      : parseFloat(pick(r, wanted.price) || 0) || '',
+  subdept,
+  list       : deriveList(subdept)
+});
+
+if (plu) pluToItemCode.set(plu, code);
 });
   
   console.log(`[Shrink-App] loaded ${masterItems.size} items`);
@@ -212,6 +224,12 @@ const fmtLocal = iso =>
     dateStyle: 'short',
     timeStyle: 'medium'
   });
+
+const localYMD = iso =>
+  new Date(iso).toLocaleDateString('en-CA', { timeZone:'America/Chicago' }); // YYYY-MM-DD
+
+const isTodayLocal = iso =>
+  localYMD(iso) === localYMD(new Date().toISOString());
 
 /* ── variable-weight (scale-label) decoder ────────────────────────────
  *  UPC-A 12-digit label that starts with “2”.
@@ -267,6 +285,20 @@ app.use('/api/admin',  adminAuth);
 app.use(express.static(path.join(__dirname, 'public')));
 
 /* ------------------------------------------------------------
+ *  PLU lookup (Scale PLU → master item)
+ * ------------------------------------------------------------ */
+app.get('/api/item-plu/:plu', (req, res) => {
+  const plu = String(req.params.plu || '').replace(/\D/g,'').trim();
+  if (!plu) return res.json({});
+
+  const code = pluToItemCode.get(plu);
+  if (!code) return res.json({});
+
+  const hit = masterItems.get(code);
+  res.json(hit || {});
+});
+
+/* ------------------------------------------------------------
  *  single item lookup
  * ------------------------------------------------------------ */
 
@@ -298,7 +330,7 @@ app.get('/api/item/:code', (req, res) => {
     if (hit) {
       hit = { ...hit, price };                      // merge price
     } else {
-      hit = { price, code: code7 };                 // no match at all
+      hit = null;
     }
   }
 
@@ -322,7 +354,7 @@ app.get('/api/shrink/export-all', (req, res) => {
   const store   = readJSON(DATA_PATH);
 
   const headers = ['list','id','timestamp','itemCode','brand',
-                   'description','quantity','price','total'];   // ⬅️ new column
+                 'description','quantity','price','total','contribute'];
   const esc     = v => `"${String(v ?? '').replace(/"/g,'""')}"`;
 
   const rows   = [];
@@ -337,9 +369,10 @@ app.get('/api/shrink/export-all', (req, res) => {
      total += lineTot;
 
      rows.push([
-       list, r.id, fmtLocal(r.timestamp), r.itemCode, r.brand,
-       r.description, r.quantity, r.price, lineTot.toFixed(2)
-     ].map(esc).join(','));
+      list, r.id, fmtLocal(r.timestamp), r.itemCode, r.brand,
+      r.description, r.quantity, r.price, lineTot.toFixed(2),
+      r.contribute ? 'Contribute' : ''
+    ].map(esc).join(','));
    });
   }
 
@@ -361,19 +394,30 @@ app.post('/api/shrink/:list', (req, res) => {
   const key = slug(req.params.list);
   const store = readJSON(DATA_PATH);
   if (!store[key]) store[key] = [];
-  let { itemCode, brand, description, quantity, price } = req.body;
+  let { itemCode, brand, description, quantity, price, contribute, plu, entryMode } = req.body;
   itemCode = normCode(itemCode);          // ← strip check-digit & left-pad
   if (!itemCode || quantity === undefined) {
     return res.status(400).json({ error: 'itemCode and quantity required' });
   }
   const record = {
-    id: crypto.randomUUID(),
-    timestamp: new Date().toISOString(),
-    itemCode, brand, description, quantity, price
-  };
+  id: crypto.randomUUID(),
+  timestamp: new Date().toISOString(),
+  itemCode, brand, description, quantity, price,
+  contribute: !!contribute,
+  plu: plu ? String(plu).replace(/\D/g,'') : null,
+  entryMode: entryMode === 'plu' ? 'plu' : 'upc'
+};
   store[key].push(record);
   writeJSON(DATA_PATH, store);
   res.json({ success: true, record });
+});
+
+// Get today's records only for one list
+app.get('/api/shrink/:list/today', (req, res) => {
+  const store = readJSON(DATA_PATH);
+  const key = slug(req.params.list);
+  const rows = (store[key] || []).filter(r => isTodayLocal(r.timestamp));
+  res.json(rows);
 });
 
 // Get records for one list filtered by date range
@@ -382,6 +426,33 @@ app.get('/api/shrink/:list', (req, res) => {
   const store = readJSON(DATA_PATH);
   const rows = (store[slug(req.params.list)] || []).filter(r => inRange(r.timestamp, from, to));
   res.json(rows);
+});
+
+// Update ONE record by ID — today-only enforced
+app.patch('/api/shrink/:list/:id', (req, res) => {
+  const key   = slug(req.params.list);
+  const recId = req.params.id;
+  const store = readJSON(DATA_PATH);
+  const arr   = store[key] || [];
+  const idx   = arr.findIndex(r => r.id === recId);
+
+  if (idx === -1) return res.status(404).json({ error:'record-not-found' });
+
+  const rec = arr[idx];
+  if (!isTodayLocal(rec.timestamp)) {
+    return res.status(403).json({ error:'edit-only-allowed-for-today' });
+  }
+
+  const { quantity, price, contribute } = req.body;
+
+  if (quantity !== undefined) rec.quantity = quantity;
+  if (price !== undefined) rec.price = price;
+  if (contribute !== undefined) rec.contribute = !!contribute;
+
+  arr[idx] = rec;
+  store[key] = arr;
+  writeJSON(DATA_PATH, store);
+  res.json({ success:true, record: rec });
 });
 
 // ── NEW: delete ONE record by ID ────────────────────────────────
@@ -426,7 +497,7 @@ app.get('/api/shrink/:list/export', (req, res) => {
   const store   = readJSON(DATA_PATH);
 
   const headers = ['id','timestamp','itemCode','brand',
-                   'description','quantity','price','total'];   // ⬅️ new column
+                 'description','quantity','price','total','contribute'];
   let   total   = 0;
 
   const rows = (store[listKey] || [])
@@ -443,11 +514,12 @@ total += qty * price;
         esc(r.description),
         esc(r.quantity),
         esc(r.price),
-        esc((qty * price).toFixed(2))        // new per-row total
+        esc((qty * price).toFixed(2)),
+        esc(r.contribute ? 'Contribute' : '')
       ].join(',');
     });
 
-  const totalRow = ['SHRINK TOTAL','','','','','','',esc(total.toFixed(2))].join(',');
+  const totalRow = ['SHRINK TOTAL','','','','','','','', '', esc(total.toFixed(2))].join(',');
 
   const csv = [headers.join(','), ...rows, totalRow].join('\n');
   res.status(200).set({
