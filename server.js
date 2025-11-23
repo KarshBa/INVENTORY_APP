@@ -423,6 +423,20 @@ app.post('/api/shrink/:list', (req, res) => {
   res.json({ success: true, record });
 });
 
+// Get today's records across ALL lists
+app.get('/api/shrink/today', (req, res) => {
+  const store = readJSON(DATA_PATH);
+  const rows = [];
+
+  for (const [list, arr] of Object.entries(store)) {
+    (arr || [])
+      .filter(r => isTodayLocal(r.timestamp))
+      .forEach(r => rows.push({ ...r, list }));
+  }
+
+  res.json(rows);
+});
+
 // Get today's records only for one list
 app.get('/api/shrink/:list/today', (req, res) => {
   const store = readJSON(DATA_PATH);
