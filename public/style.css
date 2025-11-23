@@ -251,3 +251,16 @@ td.del-col{                 /* body cell – white & sticky           */
 #downloadAll:hover {
   filter:brightness(1.1);
 }
+/* Make Save buttons green in today.html */
+button.save {
+  background: #28a745 !important;   /* same green as Download CSV */
+  color: #fff !important;
+  border: none;
+  border-radius: var(--radius, 6px);
+  padding: .35rem .7rem;
+  cursor: pointer;
+}
+
+button.save:hover {
+  filter: brightness(1.1);
+}
