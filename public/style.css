@@ -176,3 +176,22 @@ td.del-col{                 /* body cell – white & sticky           */
     font-size:1rem;
     font-weight:600;
   }
+/* --- Today button placement in code card --- */
+#code-form{ position: relative; }
+
+.today-btn{
+  position:absolute;
+  top:.75rem;
+  right:.75rem;
+  padding:.35rem .7rem;
+  border-radius:999px;
+  font-size:.85rem;
+  font-weight:600;
+  border:1px solid #cfd8d3;
+  background:#f6fbf7;
+  color:#1f4d2e;
+  text-decoration:none;
+  box-shadow:0 2px 6px rgba(0,0,0,.06);
+}
+.today-btn:hover{ filter:brightness(0.98); }
+.today-btn:active{ transform:translateY(1px); }
