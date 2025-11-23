@@ -183,7 +183,7 @@ td.del-col{                 /* body cell – white & sticky           */
   .mode-row input[type="radio"]:checked + .mode-btn{
     opacity:1;
     filter:saturate(1.1) contrast(1.05);
-    border-color:currentColor;
+    border-color:#000;
   }
 
   .note{ font-size:.9rem; opacity:.8; margin-top:.25rem; }
@@ -216,12 +216,17 @@ td.del-col{                 /* body cell – white & sticky           */
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  line-height:1;             /* keeps height tight/consistent */
-  border-radius:999px;
-  border-color:transparent;
-  background:#f6fbf7;
-  color:#fff;
+  padding:.55rem 1rem;      /* same proportions as UPC/PLU buttons */
+  border-radius:var(--radius, 6px);
+  border:none;
+  background:#1a73e8;       /* same blue as your headers/buttons */
+  color:#fff;               /* white text for contrast */
+  font-weight:600;
+  font-size:.9rem;
   text-decoration:none;
+  cursor:pointer;
+  box-shadow:0 2px 4px rgba(0,0,0,0.12);
+  transition:filter .15s ease, transform .05s ease;
 }
 .today-btn:hover{ filter:brightness(0.98); opacity:1; }
 .today-btn:active{ transform:translateY(1px); }
