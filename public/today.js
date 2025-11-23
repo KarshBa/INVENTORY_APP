@@ -7,6 +7,23 @@ function flash(text){
   setTimeout(()=>msg.classList.add('hidden'), 1800);
 }
 
+function ensureEmptyMessage(){
+  const hasRows = tbody.querySelectorAll('tr[data-id]').length > 0;
+  const placeholder = tbody.querySelector('tr[data-empty]');
+
+  if (!hasRows && !placeholder){
+    const tr = document.createElement('tr');
+    tr.dataset.empty = "1";
+    tr.innerHTML =
+      '<td colspan="9" style="text-align:center;">No entries today</td>';
+    tbody.appendChild(tr);
+  }
+
+  if (hasRows && placeholder){
+    placeholder.remove();
+  }
+}
+
 async function loadToday(){
   const res = await fetch('/api/shrink/today');
   const data = await res.json();
@@ -39,10 +56,8 @@ async function loadToday(){
     tbody.appendChild(tr);
   });
 
-  if (data.length===0){
-    tbody.innerHTML =
-      '<tr><td colspan="9" style="text-align:center;">No entries today</td></tr>';
-  }
+  // ✅ use the new helper for empty-state
+  ensureEmptyMessage();
 }
 
 tbody.addEventListener('click', async (ev)=>{
@@ -55,39 +70,65 @@ tbody.addEventListener('click', async (ev)=>{
   if (ev.target.classList.contains('del')){
     if (!confirm('Delete this record?')) return;
     const resp = await fetch(`/api/shrink/${encodeURIComponent(list)}/${id}`, { method:'DELETE' });
-    if (resp.ok){ flash('Deleted'); loadToday(); }
+    if (resp.ok){
+      flash('Deleted');
+      tr.remove();          // ✅ instant UI update
+      ensureEmptyMessage();
+    }
     else alert('Delete failed');
     return;
   }
 
   if (ev.target.classList.contains('save')){
-    const qtyField = tr.querySelector('.qty');
-    const priceField = tr.querySelector('.price');
-    const contribField = tr.querySelector('.contrib');
+  const qtyField = tr.querySelector('.qty');
+  const priceField = tr.querySelector('.price');
+  const contribField = tr.querySelector('.contrib');
 
-    const quantity = parseFloat(qtyField.value);
-    const price = priceField.value==='' ? null : parseFloat(priceField.value);
+  const quantity = parseFloat(qtyField.value);
+  const price = priceField.value==='' ? null : parseFloat(priceField.value);
 
-    if (Number.isNaN(quantity)){
-      qtyField.focus();
-      return;
-    }
+  if (Number.isNaN(quantity)){
+    qtyField.focus();
+    return;
+  }
 
-    const payload = {
-      quantity,
-      price,
-      contribute: contribField.checked
-    };
+  const payload = {
+    quantity,
+    price,
+    contribute: contribField.checked
+  };
 
-    const resp = await fetch(`/api/shrink/${encodeURIComponent(list)}/${id}`, {
+  // ⭐ ADD THESE LINES HERE
+  const saveBtn = tr.querySelector('button.save');
+  saveBtn.disabled = true;
+  saveBtn.textContent = 'Saving…';
+
+    let resp;
+  try {
+    resp = await fetch(`/api/shrink/${encodeURIComponent(list)}/${id}`, {
       method:'PATCH',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify(payload)
     });
+  } finally {
+    // ⭐ ALWAYS restore, even on error
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'Save';
+  }
+    // ✅ NEW: if fetch failed entirely
+      if (!resp) {
+        alert('Save failed (network error). Please try again.');
+        return;
+      }
 
     if (resp.ok){
       flash('Saved');
-      loadToday();
+
+      // ✅ optional: subtle visual feedback
+      tr.style.outline = '2px solid #000';
+      setTimeout(()=>tr.style.outline='none', 400);
+
+      // no reload needed
     } else {
       const err = await resp.json().catch(()=>({error:'save-failed'}));
       alert(err.error || 'Save failed (today-only enforced).');
