@@ -161,12 +161,14 @@ td.del-col{                 /* body cell – white & sticky           */
   .mode-btn.upc{
     background:#dff6e5;          /* soft green */
     color:#0e4a22;
-    border-color:#8ed6a2;
+    border-radius: var(--radius, 6px);
+    padding:.55rem 1rem; 
   }
   .mode-btn.plu{
     background:#ffe8cc;          /* soft orange */
     color:#7a3a00;
-    border-color:#f3b26b;
+    border-radius: var(--radius, 6px);
+    padding:.55rem 1rem;
   }
 
   /* selected state */
@@ -203,20 +205,27 @@ td.del-col{                 /* body cell – white & sticky           */
   position:absolute;
   top:.75rem;
   right:.75rem;
-  padding:.35rem .7rem;
-  border-radius:999px;
-  font-size:.85rem;
+
+  /* 👇 match UPC/PLU pill sizing */
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:.55rem 1rem;     /* same as .mode-btn */
+  font-size:.95rem;          /* same as mode-row text */
   font-weight:600;
-  border:1px solid #cfd8d3;
+  line-height:1;             /* keeps height tight/consistent */
+  border-radius:999px;
+  border:2px solid #cfd8d3;  /* closer to mode-btn feel */
   background:#f6fbf7;
   color:#1f4d2e;
   text-decoration:none;
   box-shadow:0 2px 6px rgba(0,0,0,.06);
+  opacity:.9;
 }
-.today-btn:hover{ filter:brightness(0.98); }
+.today-btn:hover{ filter:brightness(0.98); opacity:1; }
 .today-btn:active{ transform:translateY(1px); }
-/* --- Button color overrides --- */
 
+/* --- Button color overrides --- */
 /* Download CSV → green */
 #download {
   background:#28a745;      /* soft green */
