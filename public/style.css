@@ -195,3 +195,24 @@ td.del-col{                 /* body cell – white & sticky           */
 }
 .today-btn:hover{ filter:brightness(0.98); }
 .today-btn:active{ transform:translateY(1px); }
+/* --- Button color overrides --- */
+
+/* Download CSV → green */
+#download {
+  background:#2e8b57;      /* soft green */
+  color:#fff;
+  border:none;
+}
+#download:hover {
+  filter:brightness(1.1);
+}
+
+/* Export ALL Lists → gray */
+#downloadAll {
+  background:#555;         /* medium gray */
+  color:#fff;
+  border:none;
+}
+#downloadAll:hover {
+  filter:brightness(1.1);
+}
