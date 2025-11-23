@@ -117,7 +117,7 @@ function parseMasterCSV(csvText){
   const map  = new Map();
   rows.forEach(r=>{
     const code = normCode(pick(r, wanted.code));
-    if(!code) return;
+    if(!code || code === '0000000000000') return;
     const pluRaw = pick(r, wanted.plu);
 const plu = String(pluRaw || '').replace(/\D/g,'').trim() || null;
 map.set(code,{
@@ -147,6 +147,7 @@ export async function refreshItemList (source = 'auto') {   // 'auto' | 'manual'
 
     /* 2️⃣ rebuild in-memory map */
     masterItems.clear();
+    pluToItemCode.clear();          // ✅ NEW: prevent stale PLUs
     parseMasterCSV(csvText).forEach((v,k)=>masterItems.set(k,v));
 
     const tag = source === 'manual' ? 'Manual-refresh' : 'Auto-refresh';
@@ -376,7 +377,11 @@ app.get('/api/shrink/export-all', (req, res) => {
    });
   }
 
-  const totalRow = ['SHRINK TOTAL','','','','','','','',esc(total.toFixed(2))].join(',');
+  const totalRow = [
+  'SHRINK TOTAL','','','','','','','',
+  esc(total.toFixed(2)),
+  '' // contribute blank
+].join(',');
 
   const csv = [headers.join(','), ...rows, totalRow].join('\n');
   res.status(200).set({
@@ -519,7 +524,11 @@ total += qty * price;
       ].join(',');
     });
 
-  const totalRow = ['SHRINK TOTAL','','','','','','','', '', esc(total.toFixed(2))].join(',');
+  const totalRow = [
+  'SHRINK TOTAL','','','','','','',
+  esc(total.toFixed(2)),
+  '' // contribute blank
+].join(',');
 
   const csv = [headers.join(','), ...rows, totalRow].join('\n');
   res.status(200).set({
