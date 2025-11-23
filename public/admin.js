@@ -59,13 +59,14 @@ async function loadData () {
   <td class="description">${r.description || ''}</td>
   <td>${r.quantity}</td>
   <td>${r.price ?? ''}</td>
+  <td>${r.contribute ? 'Contribute' : ''}</td>
   <td class="del-col">
       <button class="del" data-id="${r.id}">🗑️</button>
   </td>`;
     tbody.appendChild(tr);
   });
   if (data.length===0) tbody.innerHTML =
-      '<tr><td colspan="6" style="text-align:center;">No records</td></tr>';
+  '<tr><td colspan="8" style="text-align:center;">No records</td></tr>';
 }
 
 /* ----------------- event wiring ----------------- */
