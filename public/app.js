@@ -125,11 +125,11 @@ detailForm.addEventListener('submit',async e=>{
       return;
     }
   }
-
+  
   const priceField = document.getElementById('price');
   const priceRaw = priceField.value;
   let basePrice = priceRaw === '' ? null : parseFloat(priceRaw);
-
+  const notesVal = document.getElementById('notes').value.trim();
   const reductionOn = reductionCheckbox && reductionCheckbox.checked;
   let reductionVal = 0;
 
@@ -169,6 +169,7 @@ detailForm.addEventListener('submit',async e=>{
     entryMode,
     brand: brandVal,
     description: descVal,
+    notes: notesVal,
     quantity: qtyVal,
     price: effectivePrice,
     contribute: contrib
@@ -194,6 +195,7 @@ detailForm.addEventListener('submit',async e=>{
       entryMode,
       brand: brandVal,
       description: `${descVal} REDUCTIONS`,
+      notes: notesVal,
       quantity: qtyVal,
       price: reductionVal,
       contribute: contrib
