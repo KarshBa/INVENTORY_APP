@@ -78,12 +78,21 @@
         <input type="number" step="0.01" id="price" readonly />
       </div>
 
-      <!-- NEW: Contribute checkbox -->
+            <!-- Contribute + Reduction row -->
       <div class="field contribute-row">
         <input type="checkbox" id="contribute" />
         <label for="contribute" class="contribute-label">Contribute</label>
+
+        <!-- NEW: Reduction toggle -->
+        <input type="checkbox" id="reduction" style="margin-left:1.5rem;" />
+        <label for="reduction" class="reduction-label">Reduction</label>
       </div>
 
+      <!-- NEW: Reduction amount field (hidden until checked) -->
+      <div class="field hidden" id="reduction-wrapper">
+        <label for="reductionAmount">Enter Reduction Amount</label>
+        <input type="number" step="0.01" id="reductionAmount" />
+      </div>
 
       <button type="submit">Record Shrink</button>
     </form>
