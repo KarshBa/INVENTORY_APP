@@ -79,9 +79,16 @@ button.del:hover{ background:#a30000; }  /* darker on hover */
   white-space: nowrap;
 }
 
-/* optional: ellipsis long descriptions instead of forcing wide cells */
+/* ellipsis long descriptions instead of forcing wide cells */
 #shrink-table td.description{
   max-width:180px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+/* ellipsis for Notes column as well */
+#shrink-table td.notes{
+  max-width:180px;          /* or 200–220px if you want more room */
   white-space:nowrap;
   overflow:hidden;
   text-overflow:ellipsis;
