@@ -405,7 +405,7 @@ app.post('/api/shrink/:list', (req, res) => {
   const key = slug(req.params.list);
   const store = readJSON(DATA_PATH);
   if (!store[key]) store[key] = [];
-  let { itemCode, brand, description, quantity, price, contribute, plu, entryMode } = req.body;
+  let { itemCode, brand, description, notes, quantity, price, contribute, plu, entryMode } = req.body;
   itemCode = normCode(itemCode);          // ← strip check-digit & left-pad
   if (!itemCode || quantity === undefined) {
     return res.status(400).json({ error: 'itemCode and quantity required' });
@@ -413,7 +413,12 @@ app.post('/api/shrink/:list', (req, res) => {
   const record = {
   id: crypto.randomUUID(),
   timestamp: new Date().toISOString(),
-  itemCode, brand, description, quantity, price,
+  itemCode, 
+  brand, 
+  description, 
+  notes: notes || '',
+  quantity, 
+  price,
   contribute: !!contribute,
   plu: plu ? String(plu).replace(/\D/g,'') : null,
   entryMode: entryMode === 'plu' ? 'plu' : 'upc'
