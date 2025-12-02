@@ -57,6 +57,7 @@ async function loadData () {
   <td class="code">${r.itemCode}</td>
   <td class="brand">${r.brand || ''}</td>
   <td class="description">${r.description || ''}</td>
+  <td class="notes">${r.notes || ''}</td>          <!-- ✅ NEW -->
   <td>${r.quantity}</td>
   <td>${r.price ?? ''}</td>
   <td>${r.contribute ? 'Contribute' : ''}</td>
@@ -66,7 +67,7 @@ async function loadData () {
     tbody.appendChild(tr);
   });
   if (data.length===0) tbody.innerHTML =
-  '<tr><td colspan="8" style="text-align:center;">No records</td></tr>';
+  '<tr><td colspan="9" style="text-align:center;">No records</td></tr>';
 }
 
 /* ----------------- event wiring ----------------- */
