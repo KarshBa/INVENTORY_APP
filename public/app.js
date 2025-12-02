@@ -9,6 +9,23 @@ let entryMode='upc';
 
 const itemCodeInput = document.getElementById('itemCode');
 const modeNote = document.getElementById('mode-note');
+const reductionCheckbox = document.getElementById('reduction');
+const reductionWrapper = document.getElementById('reduction-wrapper');
+const reductionAmountInput = document.getElementById('reductionAmount');
+
+function updateReductionUI(){
+  if (!reductionCheckbox) return;
+  if (reductionCheckbox.checked){
+    reductionWrapper.classList.remove('hidden');
+  } else {
+    reductionWrapper.classList.add('hidden');
+    reductionAmountInput.value = '';
+  }
+}
+
+if (reductionCheckbox) {
+  reductionCheckbox.addEventListener('change', updateReductionUI);
+}
 
 function getMode(){
   const checked = document.querySelector('input[name="entryMode"]:checked');
@@ -29,6 +46,7 @@ document.querySelectorAll('input[name="entryMode"]').forEach(r=>{
 // Focus the “Enter Item Code” field on page load
 window.addEventListener('DOMContentLoaded', () => {
   updateModeUI();
+  updateReductionUI();
 });
 
 // load lists
@@ -108,31 +126,100 @@ detailForm.addEventListener('submit',async e=>{
     }
   }
 
-  const payload={
-    itemCode:currentItemCode,
+  const priceField = document.getElementById('price');
+  const priceRaw = priceField.value;
+  let basePrice = priceRaw === '' ? null : parseFloat(priceRaw);
+
+  const reductionOn = reductionCheckbox && reductionCheckbox.checked;
+  let reductionVal = 0;
+
+  if (reductionOn) {
+    reductionVal = parseFloat(reductionAmountInput.value);
+    if (Number.isNaN(reductionVal) || reductionVal < 0) {
+      alert('Please enter a valid reduction amount (non-negative number).');
+      reductionAmountInput.focus();
+      return;
+    }
+    if (basePrice === null || Number.isNaN(basePrice)) {
+      alert('Cannot apply a reduction when there is no base price.');
+      return;
+    }
+    if (reductionVal >= basePrice) {
+      alert('Reduction amount must be less than the current price.');
+      reductionAmountInput.focus();
+      return;
+    }
+  }
+
+  // Effective price for the main shrink line
+  let effectivePrice = basePrice;
+  if (reductionOn && basePrice !== null && !Number.isNaN(basePrice)) {
+    effectivePrice = basePrice - reductionVal;
+  }
+
+  const brandVal = document.getElementById('brand').value.trim();
+  const descVal  = document.getElementById('description').value.trim();
+  const contrib  = document.getElementById('contribute').checked;
+  const listName = listSelect.value;
+
+  // Main shrink entry payload (possibly reduced price)
+  const mainPayload = {
+    itemCode: currentItemCode,
     plu: currentPLU,
     entryMode,
-    brand:document.getElementById('brand').value.trim(),
-    description:document.getElementById('description').value.trim(),
-    quantity:qtyVal,
-    price:document.getElementById('price').value===''?null:parseFloat(document.getElementById('price').value),
-    contribute: document.getElementById('contribute').checked
+    brand: brandVal,
+    description: descVal,
+    quantity: qtyVal,
+    price: effectivePrice,
+    contribute: contrib
   };
 
-  const listName=listSelect.value;
+  // 1️⃣ Create the main shrink record
   const res = await fetch('/api/shrink/' + encodeURIComponent(listName), {
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify(payload)
+    body:JSON.stringify(mainPayload)
   });
 
-  if(res.ok){
-    successMsg.textContent=`Shrink recorded to "${listName}" successfully!`;
-    successMsg.classList.remove('hidden');
-    detailForm.reset(); detailForm.classList.add('hidden');
-    codeForm.reset(); codeForm.classList.remove('hidden');
-    updateModeUI();
-  }else{
+  if (!res.ok){
     alert('Error saving record');
+    return;
   }
+
+  // 2️⃣ If reduction is checked, create the “REDUCTIONS” companion line
+  if (reductionOn) {
+    const reductionPayload = {
+      itemCode: currentItemCode,
+      plu: currentPLU,
+      entryMode,
+      brand: brandVal,
+      description: `${descVal} REDUCTIONS`,
+      quantity: qtyVal,
+      price: reductionVal,
+      contribute: contrib
+    };
+
+    const res2 = await fetch('/api/shrink/' + encodeURIComponent(listName), {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(reductionPayload)
+    });
+
+    if (!res2.ok) {
+      alert('Base entry saved, but the reduction line failed to save.');
+    }
+  }
+
+  // 3️⃣ Success UI / reset
+  successMsg.textContent=`Shrink recorded to "${listName}" successfully!`;
+  successMsg.classList.remove('hidden');
+
+  detailForm.reset();
+  detailForm.classList.add('hidden');
+  codeForm.reset();
+  codeForm.classList.remove('hidden');
+
+  // keep things visually reset
+  updateModeUI();
+  updateReductionUI();
 });
