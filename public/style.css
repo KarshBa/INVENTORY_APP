@@ -188,24 +188,30 @@ td.del-col{                 /* body cell – white & sticky           */
 
   .note{ font-size:.9rem; opacity:.8; margin-top:.25rem; }
 
-  /* Contribute row: bigger box, left-justified */
-  .contribute-row{
-    display:flex;
-    align-items:center;
-    justify-content:flex-start;
-    gap:.6rem;
-    margin-top:.25rem;
-  }
-  #contribute{
-    width:22px;
-    height:22px;
-    transform:translateY(1px);
-    accent-color:#2b7a3d; /* modern browsers; safe if ignored */
-  }
-  .contribute-label{
-    font-size:1rem;
-    font-weight:600;
-  }
+  /* Contribute + Reduction row: bigger box, left-justified */
+.contribute-row,
+.reduction-row{
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  gap:.6rem;
+  margin-top:.25rem;
+}
+
+#contribute,
+#reduction{
+  width:22px;
+  height:22px;
+  transform:translateY(1px);
+  accent-color:#2b7a3d; /* modern browsers; safe if ignored */
+}
+
+.contribute-label,
+.reduction-label{
+  font-size:1rem;
+  font-weight:600;
+}
+
 /* --- Today button placement in code card --- */
 #code-form{ position: relative; }
 
