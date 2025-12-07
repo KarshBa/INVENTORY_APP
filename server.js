@@ -604,9 +604,22 @@ app.get('/api/shrink-summary', (req, res) => {
       if (targetSub && sub !== targetSub) return;
       matchedSub++;
 
-      const qty   = parseFloat(r.quantity) || 0;
-      const price = parseFloat(r.price)    || 0;
-      const line  = qty * price;
+      // 🔒 Sanity-check quantity & price: skip obviously bogus rows
+      const qty   = Number.parseFloat(r.quantity);
+      const price = Number.parseFloat(r.price);
+
+      if (
+        !Number.isFinite(qty)  ||
+        !Number.isFinite(price)||
+        qty <= 0               ||
+        price < 0              ||
+        qty > 1000             ||   // avoid 10-digit “quantities”
+        price > 1000               // avoid $10k “prices”
+      ) {
+        return; // skip this record
+      }
+
+      const line = qty * price;
 
       total += line;
 
