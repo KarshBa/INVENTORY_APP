@@ -559,5 +559,69 @@ total += qty * price;
   }).send(csv);
 });
 
+// ─── Shrink summary by sub-department & date range ──────────────────────────
+// GET /api/shrink-summary?from=YYYY-MM-DD&to=YYYY-MM-DD[&subdept=###]
+// - from / to are REQUIRED (local date range)
+// - subdept optional; if omitted, aggregates ALL subdepartments
+//
+// Returns:
+// {
+//   total: 123.45,        // total shrink $ in range
+//   items: [              // top 10 by shrink $
+//     { code, brand, description, amount },
+//     ...
+//   ]
+// }
+app.get('/api/shrink-summary', (req, res) => {
+  const { from, to, subdept } = req.query;
+  if (!from || !to) {
+    return res.status(400).json({ error: 'from and to are required in YYYY-MM-DD' });
+  }
+
+  const targetSub = subdept && subdept !== 'all'
+    ? String(subdept).trim()
+    : null;
+
+  const store = readJSON(DATA_PATH);
+  const byItem = new Map(); // code → { code, brand, description, amount }
+  let total = 0;
+
+  for (const arr of Object.values(store)) {
+    (arr || [])
+      .filter(r => inRange(r.timestamp, from, to))
+      .forEach(r => {
+        const item = masterItems.get(r.itemCode);
+        const sub = item?.subdept ? String(item.subdept).trim() : null;
+
+        // If we care about a specific sub-dept, skip others
+        if (targetSub && sub !== targetSub) return;
+
+        const qty   = parseFloat(r.quantity) || 0;
+        const price = parseFloat(r.price)    || 0;
+        const line  = qty * price;
+
+        total += line;
+
+        let agg = byItem.get(r.itemCode);
+        if (!agg) {
+          agg = {
+            code: r.itemCode,
+            brand: item?.brand || r.brand || '',
+            description: item?.description || r.description || '',
+            amount: 0
+          };
+          byItem.set(r.itemCode, agg);
+        }
+        agg.amount += line;
+      });
+  }
+
+  const items = Array.from(byItem.values())
+    .sort((a, b) => b.amount - a.amount)
+    .slice(0, 10);
+
+  res.json({ total, items });
+});
+
 // Start server
 app.listen(PORT, () => console.log('Inventory Shrink app running on port', PORT));
