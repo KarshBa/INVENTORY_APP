@@ -583,38 +583,51 @@ app.get('/api/shrink-summary', (req, res) => {
     : null;
 
   const store = readJSON(DATA_PATH);
-  const byItem = new Map(); // code → { code, brand, description, amount }
+  const byItem = new Map();
   let total = 0;
+  let scanned = 0;
+  let inWindow = 0;
+  let matchedSub = 0;
 
-  for (const arr of Object.values(store)) {
-    (arr || [])
-      .filter(r => inRange(r.timestamp, from, to))
-      .forEach(r => {
-        const item = masterItems.get(r.itemCode);
-        const sub = item?.subdept ? String(item.subdept).trim() : null;
+  console.log('[shrink-summary] from=', from, 'to=', to, 'subdept=', subdept, 'targetSub=', targetSub);
 
-        // If we care about a specific sub-dept, skip others
-        if (targetSub && sub !== targetSub) return;
+  for (const [listName, arr] of Object.entries(store)) {
+    (arr || []).forEach(r => {
+      scanned++;
+      const inWin = inRange(r.timestamp, from, to);
+      if (!inWin) return;
+      inWindow++;
 
-        const qty   = parseFloat(r.quantity) || 0;
-        const price = parseFloat(r.price)    || 0;
-        const line  = qty * price;
+      const item = masterItems.get(r.itemCode);
+      const sub = item?.subdept ? String(item.subdept).trim() : null;
 
-        total += line;
+      if (targetSub && sub !== targetSub) return;
+      matchedSub++;
 
-        let agg = byItem.get(r.itemCode);
-        if (!agg) {
-          agg = {
-            code: r.itemCode,
-            brand: item?.brand || r.brand || '',
-            description: item?.description || r.description || '',
-            amount: 0
-          };
-          byItem.set(r.itemCode, agg);
-        }
-        agg.amount += line;
-      });
+      const qty   = parseFloat(r.quantity) || 0;
+      const price = parseFloat(r.price)    || 0;
+      const line  = qty * price;
+
+      total += line;
+
+      let agg = byItem.get(r.itemCode);
+      if (!agg) {
+        agg = {
+          code: r.itemCode,
+          brand: item?.brand || r.brand || '',
+          description: item?.description || r.description || '',
+          amount: 0
+        };
+        byItem.set(r.itemCode, agg);
+      }
+      agg.amount += line;
+    });
   }
+
+  console.log('[shrink-summary] scanned=', scanned,
+              'inWindow=', inWindow,
+              'matchedSub=', matchedSub,
+              'total=', total.toFixed(2));
 
   const items = Array.from(byItem.values())
     .sort((a, b) => b.amount - a.amount)
