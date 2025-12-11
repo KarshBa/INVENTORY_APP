@@ -360,8 +360,9 @@ app.get('/api/shrink/export-all', (req, res) => {
   const { from, to } = req.query;
   const store   = readJSON(DATA_PATH);
 
+  // ✅ Added "notes" after description
   const headers = ['list','id','timestamp','itemCode','brand',
-                 'description','quantity','price','total','contribute'];
+                   'description','notes','quantity','price','total','contribute'];
   const esc     = v => `"${String(v ?? '').replace(/"/g,'""')}"`;
 
   const rows   = [];
@@ -369,25 +370,42 @@ app.get('/api/shrink/export-all', (req, res) => {
 
   for (const [list, arr] of Object.entries(store)) {
     arr.filter(r => inRange(r.timestamp, from, to))
-   .forEach(r => {
-     const qty      = parseFloat(r.quantity) || 0;
-     const price    = parseFloat(r.price)    || 0;
-     const lineTot  = qty * price;
-     total += lineTot;
+      .forEach(r => {
+        const qty      = parseFloat(r.quantity) || 0;
+        const price    = parseFloat(r.price)    || 0;
+        const lineTot  = qty * price;
+        total += lineTot;
 
-     rows.push([
-      list, r.id, fmtLocal(r.timestamp), r.itemCode, r.brand,
-      r.description, r.quantity, r.price, lineTot.toFixed(2),
-      r.contribute ? 'Contribute' : ''
-    ].map(esc).join(','));
-   });
+        rows.push([
+          list,
+          r.id,
+          fmtLocal(r.timestamp),
+          r.itemCode,
+          r.brand,
+          r.description,
+          r.notes || '',           // ✅ NEW: notes column
+          r.quantity,
+          r.price,
+          lineTot.toFixed(2),
+          r.contribute ? 'Contribute' : ''
+        ].map(esc).join(','));
+      });
   }
 
+  // headers: list,id,timestamp,itemCode,brand,description,notes,quantity,price,total,contribute
   const totalRow = [
-  'SHRINK TOTAL','','','','','','','',
-  esc(total.toFixed(2)),
-  '' // contribute blank
-].join(',');
+    'SHRINK TOTAL', // list
+    '',             // id
+    '',             // timestamp
+    '',             // itemCode
+    '',             // brand
+    '',             // description
+    '',             // notes
+    '',             // quantity
+    '',             // price
+    esc(total.toFixed(2)), // total
+    ''              // contribute
+  ].join(',');
 
   const csv = [headers.join(','), ...rows, totalRow].join('\n');
   res.status(200).set({
@@ -405,7 +423,7 @@ app.post('/api/shrink/:list', (req, res) => {
   const key = slug(req.params.list);
   const store = readJSON(DATA_PATH);
   if (!store[key]) store[key] = [];
-  let { itemCode, brand, description, quantity, price, contribute, plu, entryMode } = req.body;
+  let { itemCode, brand, description, quantity, price, contribute, plu, entryMode, notes } = req.body;
   itemCode = normCode(itemCode);          // ← strip check-digit & left-pad
   if (!itemCode || quantity === undefined) {
     return res.status(400).json({ error: 'itemCode and quantity required' });
@@ -416,7 +434,8 @@ app.post('/api/shrink/:list', (req, res) => {
   itemCode, brand, description, quantity, price,
   contribute: !!contribute,
   plu: plu ? String(plu).replace(/\D/g,'') : null,
-  entryMode: entryMode === 'plu' ? 'plu' : 'upc'
+  entryMode: entryMode === 'plu' ? 'plu' : 'upc',
+  notes: notes ? String(notes).slice(0, 200) : ''
 };
   store[key].push(record);
   writeJSON(DATA_PATH, store);
@@ -521,22 +540,24 @@ app.get('/api/shrink/:list/export', (req, res) => {
   const listKey = slug(req.params.list);
   const store   = readJSON(DATA_PATH);
 
+  // ✅ Added "notes" after description
   const headers = ['id','timestamp','itemCode','brand',
-                 'description','quantity','price','total','contribute'];
+                   'description','notes','quantity','price','total','contribute'];
   let   total   = 0;
 
   const rows = (store[listKey] || [])
     .filter(r => inRange(r.timestamp, from, to))
     .map(r => {
-const qty   = parseFloat(r.quantity) || 0;
-const price = parseFloat(r.price)     || 0;
-total += qty * price;
-            return [
+      const qty   = parseFloat(r.quantity) || 0;
+      const price = parseFloat(r.price)    || 0;
+      total += qty * price;
+      return [
         esc(r.id),
         esc(fmtLocal(r.timestamp)),
         esc(r.itemCode),
         esc(r.brand),
         esc(r.description),
+        esc(r.notes || ''),              // ✅ NEW: notes column
         esc(r.quantity),
         esc(r.price),
         esc((qty * price).toFixed(2)),
@@ -544,11 +565,19 @@ total += qty * price;
       ].join(',');
     });
 
+  // headers: id,timestamp,itemCode,brand,description,notes,quantity,price,total,contribute
   const totalRow = [
-  'SHRINK TOTAL','','','','','','',
-  esc(total.toFixed(2)),
-  '' // contribute blank
-].join(',');
+    'SHRINK TOTAL', // id column (label row)
+    '',             // timestamp
+    '',             // itemCode
+    '',             // brand
+    '',             // description
+    '',             // notes
+    '',             // quantity
+    '',             // price
+    esc(total.toFixed(2)), // total
+    ''              // contribute
+  ].join(',');
 
   const csv = [headers.join(','), ...rows, totalRow].join('\n');
   res.status(200).set({
