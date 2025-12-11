@@ -2,6 +2,7 @@ const listSelect=document.getElementById('listSelect');
 const codeForm=document.getElementById('code-form');
 const detailForm=document.getElementById('detail-form');
 const successMsg=document.getElementById('success-msg');
+const notesField = document.getElementById('notes');
 
 let currentItemCode='';
 let currentPLU=null;
@@ -161,6 +162,7 @@ detailForm.addEventListener('submit',async e=>{
   const descVal  = document.getElementById('description').value.trim();
   const contrib  = document.getElementById('contribute').checked;
   const listName = listSelect.value;
+  const notesVal = notesField ? notesField.value.trim() : '';
 
   // Main shrink entry payload (possibly reduced price)
   const mainPayload = {
@@ -171,7 +173,8 @@ detailForm.addEventListener('submit',async e=>{
     description: descVal,
     quantity: qtyVal,
     price: effectivePrice,
-    contribute: contrib
+    contribute: contrib,
+    notes: notesVal
   };
 
   // 1️⃣ Create the main shrink record
@@ -196,7 +199,8 @@ detailForm.addEventListener('submit',async e=>{
       description: `${descVal} REDUCTIONS`,
       quantity: qtyVal,
       price: reductionVal,
-      contribute: contrib
+      contribute: contrib,
+      notes: notesVal
     };
 
     const res2 = await fetch('/api/shrink/' + encodeURIComponent(listName), {
