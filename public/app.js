@@ -36,7 +36,7 @@ function updateModeUI(){
   entryMode = getMode();
   modeNote.textContent = entryMode === 'plu'
     ? 'Scale PLU mode: enter the item Scale PLU.'
-    : 'UPC mode: scan or type the UPC.';
+    : 'UPC mode: scan UPC or type the PLU.';
   itemCodeInput.value = '';
   itemCodeInput.focus();
 }
